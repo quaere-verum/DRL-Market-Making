@@ -1,10 +1,24 @@
 import numpy as np
 import gymnasium as gym
-import scipy.stats as ss
+from utils.history import History
+from utils.portfolio import SimplePortfolio
+from typing import Callable, Any
+
+
+def base_reward_function(info):
+    stock_delta = info['stock_held', -1] - info['stock_held', -2]
+    option_delta = (max(info['stock_price', -1] - info['strike_price', 0], 0) -
+                    max(info['stock_price', -2] - info['strike_price', 0], 0))
+    transaction_cost = info['transaction_fees', 0]*info['stock_price', - 1]*np.abs(stock_delta)
+    stock_pnl = info['stock_held', -2]*(info['stock_price', -1] - info['stock_price', -2])
+    return -transaction_cost - option_delta + stock_pnl
+
 
 class MarketMakingEnv(gym.Env):
     metadata = {'render_modes': ['logs']}
-    def __init__(self, epsilon, max_duration: int = 30, transaction_fees: float = 0.001):
+
+    def __init__(self, epsilon, reward_function: Callable[[Any], float] = base_reward_function, max_duration: int = 30,
+                 transaction_fees: float = 0.001):
         super().__init__()
         assert epsilon >= 0
         
@@ -20,71 +34,75 @@ class MarketMakingEnv(gym.Env):
             'volatility_forecast': gym.spaces.Box(0, 1), 
             'black_scholes_hedge': gym.spaces.Box(0, 1)
         })
-        
-        self.strike_price = None
-        self.stock_price = None
-        self.remaining_time = None
-        self.stock_held = None
-        self.cash = None
-        self.option_value = None
+
         self.sigma = 0.01
+        self.portfolio = None
+        self.reward_function = reward_function
         
         self.info = None
         
     def reset(self, seed=None, options=None):
-        self.strike_price = np.random.uniform(0.5, 1.5)
-        self.stock_price = 1
-        self.remaining_time = np.random.randint(low=1, high=self.max_duration + 1)
-        self.stock_held = 0
-        self.option_value = -np.max(self.stock_price - self.strike_price, 0)
+        strike_price = np.random.uniform(0.5, 1.5)
+        expiry_time = np.random.randint(low=1, high=self.max_duration + 1)
+        self.portfolio = SimplePortfolio(strike_price=strike_price,
+                                         stock_price=1,
+                                         expiry_time=expiry_time,
+                                         transaction_fees=self.transaction_fees)
+        self.info = History(max_size=self.max_duration)
         
-        
-        d_plus = 1/(self.sigma*np.sqrt(self.remaining_time))*(np.log(self.stock_price/self.strike_price) +
-                                                 1/2*self.sigma**2/2*self.remaining_time)
-        black_scholes_hedge = ss.norm.cdf(d_plus)
+        black_scholes_hedge = self.portfolio.black_scholes_hedge(self.sigma)
         
         state = {
-            'stock_price': self.stock_price,
-            'remaining_time': self.remaining_time,
-            'stock_held': self.stock_held,
-            'strike_price': self.strike_price,
+            'stock_price': self.portfolio.stock_price,
+            'remaining_time': self.portfolio.remaining_time,
+            'stock_held': self.portfolio.stock_held,
+            'strike_price': self.portfolio.strike_price,
             'volatility_forecast': self.sigma,
             'black_scholes_hedge': black_scholes_hedge
         }
-        
-        return state, self.info
+        self.info.set(
+            transaction_fees=self.transaction_fees,
+            **state
+        )
+        return state, self.info[-1]
     
     def step(self, action=None):
+        action = action[0]
         done, truncated = False, False
-        new_price = self.stock_price*np.exp(np.random.normal(0, self.sigma))
-        new_option_value = -np.max(new_price - self.strike_price, 0)
-        self.remaining_time -= 1
-        price_delta = self.stock_held*(new_price - self.stock_price)
-        option_delta = new_option_value - self.option_value
-        transaction_cost = self.transaction_fees*self.stock_price*np.abs(action-self.stock_held)
-        reward = -transaction_cost + option_delta + price_delta
+        new_price = self.portfolio.stock_price*np.exp(np.random.normal(0, self.sigma))
+        self.portfolio.update_position(new_price, action)
+        black_scholes_hedge = self.portfolio.black_scholes_hedge(self.sigma)
 
-        self.stock_price = new_price
-        self.option_value = new_option_value
-        self.stock_held = action
-        
-        if self.remaining_time == 1:
-            reward -= self.stock_held*new_price*self.transaction_fees
-            done = True
-        
-        d_plus = 1/(self.sigma*np.sqrt(self.remaining_time))*(np.log(self.stock_price/self.strike_price) +
-                                                 1/2*self.sigma**2/2*self.remaining_time)
-        black_scholes_hedge = ss.norm.cdf(d_plus)
         state = {
-            'stock_price': self.stock_price,
-            'remaining_time': self.remaining_time,
-            'stock_held': self.stock_held,
-            'strike_price': self.strike_price,
+            'stock_price': self.portfolio.stock_price,
+            'remaining_time': self.portfolio.remaining_time,
+            'stock_held': self.portfolio.stock_held,
+            'strike_price': self.portfolio.strike_price,
             'volatility_forecast': self.sigma,
             'black_scholes_hedge': black_scholes_hedge
         }
-        
-        return state, reward, done, truncated, self.info
+
+        self.info.add(
+            transaction_fees=self.transaction_fees,
+            **state
+        )
+        reward = self.reward_function(self.info)
+
+        if self.portfolio.remaining_time == 1:
+            reward -= self.portfolio.stock_held * new_price * self.transaction_fees
+            done = True
+
+        return state, reward, done, truncated, self.info[-1]
     
     def render(self):
         pass
+
+
+if __name__ == '__main__':
+    test = MarketMakingEnv(0.1)
+    done, truncated = False, False
+    obs, info = test.reset()
+    while not done and not truncated:
+        action = test.action_space.sample()
+        obs, reward, done, truncated, info = test.step(action)
+        print(reward)
