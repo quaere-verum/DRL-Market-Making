@@ -41,8 +41,3 @@ As a first step we design the environment in which our agents get to act. More s
 In phase 1, the action space is simply $\mathcal{A}=[0,1+\varepsilon]$, where $\varepsilon > 0$ is a hyperparameter of the model. The reason for this is that we assume that Black-Scholes offers a good approximation to reality, and in this case, the hedging amount is $\Phi(d_+)$ where $\Phi:\mathbb{R}\to[0,1]$ is the cumulative distribution function of the standard normal. Our action $a$ will be the replacement for $\Phi(d_+)$, and so we expect that the optimal action $a^*\in[0,1]$. To give additional room for exploration, we add the constant epsilon.
 
 The state space is then given by the parameters which are used in the Black-Scholes model: the price $S(t)$, the remaining time until expiry $T-t$, the amount of stock currently held, the strike price $K$, and a forecast of the volatility $\widetilde{\sigma}$ (if not assumed to be constant). Additionally, we will include the Black-Scholes hedge as part of the state, to give the agent an anchor. Our deep neural network will be predicting the residual of the optimal hedging amount, compared to the Black-Scholes solution.
-
-
-```python
-
-```
