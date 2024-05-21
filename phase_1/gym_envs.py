@@ -26,14 +26,18 @@ class MarketMakingEnv(gym.Env):
         self.transaction_fees = transaction_fees
         
         self.action_space = gym.spaces.Box(low=0, high=1+epsilon)
-        self.observation_space = gym.spaces.Dict({
-            'stock_price': gym.spaces.Box(0, 2),
-            'remaining_time': gym.spaces.Discrete(max_duration+1),
-            'stock_held': gym.spaces.Box(0, 1+epsilon),
-            'strike_price': gym.spaces.Box(0, 2),
-            'volatility_forecast': gym.spaces.Box(0, 1), 
-            'black_scholes_hedge': gym.spaces.Box(0, 1)
-        })
+        # self.observation_space = gym.spaces.Dict({
+        #     'stock_price': gym.spaces.Box(0, 2),
+        #     'remaining_time': gym.spaces.Discrete(start=1, n=max_duration+1),
+        #     'stock_held': gym.spaces.Box(0, 1+epsilon),
+        #     'strike_price': gym.spaces.Box(0, 2),
+        #     'volatility_forecast': gym.spaces.Box(0, 1),
+        #     'black_scholes_hedge': gym.spaces.Box(0, 1)
+        # })
+        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
+                                                high=np.array([2, max_duration+1,
+                                                               1+epsilon, 2, 1, 1]).astype(np.float32),
+                                                shape=(6,))
 
         self.sigma = 0.01
         self.portfolio = None
@@ -43,7 +47,7 @@ class MarketMakingEnv(gym.Env):
         
     def reset(self, seed=None, options=None):
         strike_price = np.random.uniform(0.5, 1.5)
-        expiry_time = np.random.randint(low=1, high=self.max_duration + 1)
+        expiry_time = np.random.randint(low=2, high=self.max_duration + 1)
         self.portfolio = SimplePortfolio(strike_price=strike_price,
                                          stock_price=1,
                                          expiry_time=expiry_time,
@@ -64,7 +68,7 @@ class MarketMakingEnv(gym.Env):
             transaction_fees=self.transaction_fees,
             **state
         )
-        return state, self.info[-1]
+        return np.array(list(state.values()), dtype=np.float32), self.info[-1]
     
     def step(self, action=None):
         action = action[0]
@@ -91,18 +95,7 @@ class MarketMakingEnv(gym.Env):
         if self.portfolio.remaining_time == 1:
             reward -= self.portfolio.stock_held * new_price * self.transaction_fees
             done = True
-
-        return state, reward, done, truncated, self.info[-1]
+        return np.array(list(state.values()), dtype=np.float32), reward, done, truncated, self.info[-1]
     
     def render(self):
         pass
-
-
-if __name__ == '__main__':
-    test = MarketMakingEnv(0.1)
-    done, truncated = False, False
-    obs, info = test.reset()
-    while not done and not truncated:
-        action = test.action_space.sample()
-        obs, reward, done, truncated, info = test.step(action)
-        print(reward)
