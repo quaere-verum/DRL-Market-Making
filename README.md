@@ -7,7 +7,7 @@ We are going to make some assumptions about the market dynamics in order to have
 - We can borrow and lend any amount of the underlying asset, or cash
 
 # Research question
-The fair price of a call option with strike price $K$ and expiry time $T$ at time $t_0$ with respect to the risk neutral measure $\mathbb{Q}$ is given by $\mathbb{E}(\max(S(T)-K, 0))$.
+The fair price of a call option with strike price $K$ and expiry time $T$ at time $t_0$ with respect to the risk neutral measure $\mathbb{Q}$ is given by $\mathbb{E}(\max(S(T)-K, 0)\mid S(0)=x)$.
 Under the assumptions of the Black-Scholes model, there is a way to perfectly hedge our position when selling an option by continuously re-adjusting our portfolio without market friction. In practice, it is not possible to continuously hedge, and there is friction. Therefore, the question becomes: is it possible for a deep reinforcement learning (DRL) agent to learn to be a market maker and beat the baseline Black-Scholes model, both by adapting to a more realistic environment, and by beating its competition on the bid/ask spread, while remaining profitable?
 
 # Model implementation
