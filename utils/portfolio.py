@@ -20,5 +20,5 @@ class SimplePortfolio:
     def black_scholes_hedge(self, sigma):
         d_plus = 1 / (sigma * np.sqrt(self.remaining_time)) * (
                     np.log(self.stock_price / self.strike_price) +
-                    1 / 2 * sigma ** 2 / 2 * self.remaining_time)
+                    sigma ** 2 / 2 * self.remaining_time)
         return ss.norm.cdf(d_plus)
