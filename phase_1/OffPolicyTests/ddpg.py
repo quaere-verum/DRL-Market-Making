@@ -39,10 +39,13 @@ if __name__ == '__main__':
     env = gym.make('MarketMakingEnv', epsilon=epsilon, seed=seed_value)
     train_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
                                                     epsilon=epsilon,
-                                                    seed=seed_value*k) for k in range(20)])
+                                                    seed=seed_value * k,
+                                                    duration_bounds=(6, 12)) for k in range(20)])
     test_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
                                                    epsilon=epsilon,
-                                                   seed=seed_value*k) for k in range(10)])
+                                                   seed=seed_value * k,
+                                                   duration_bounds=(6, 12),
+                                                   benchmark=True) for k in range(10)])
     actor_net = Net(state_shape=env.observation_space.shape, hidden_sizes=[64, 32, 16, 4], device=device)
     critic_state_shape = (env.observation_space.shape[0] + 1,)
     critic_net = Net(state_shape=critic_state_shape, hidden_sizes=[64, 32, 16, 4], device=device)
