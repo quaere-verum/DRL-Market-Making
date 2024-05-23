@@ -5,14 +5,17 @@ from utils.portfolio import SimplePortfolio
 from typing import Callable, Any
 
 
-def base_reward_function(info, benchmark=False):
-    col = 'benchmark_stock_held' if benchmark else 'stock_held'
-    stock_delta = info[col, -1] - info[col, -2]
-    option_delta = (max(info['stock_price', -1] - info['strike_price', 0], 0) -
-                    max(info['stock_price', -2] - info['strike_price', 0], 0))
-    transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_delta)
-    stock_pnl = info[col, -2] * (info['stock_price', -1] - info['stock_price', -2])
-    return -transaction_cost - option_delta + stock_pnl
+def make_reward_function(rho=0.):
+    def base_reward_function(info, benchmark=False):
+        col = 'benchmark_stock_held' if benchmark else 'stock_held'
+        stock_amount_delta = info[col, -1] - info[col, -2]
+        option_delta = (max(info['stock_price', -1] - info['strike_price', 0], 0) -
+                        max(info['stock_price', -2] - info['strike_price', 0], 0))
+        transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_amount_delta)
+        stock_delta = info[col, -2] * (info['stock_price', -1] - info['stock_price', -2])
+        portfolio_delta = stock_delta - option_delta
+        return portfolio_delta - transaction_cost - rho*portfolio_delta ** 2
+    return base_reward_function
 
 
 class MarketMakingEnv(gym.Env):
@@ -21,7 +24,7 @@ class MarketMakingEnv(gym.Env):
     def __init__(self,
                  epsilon: float = 0.1,
                  sigma: float = 0.1,
-                 reward_function: Callable[[Any], float] = base_reward_function,
+                 rho: float = 0.,
                  duration_bounds: tuple = (2, 30),
                  transaction_fees: float = 0.001,
                  seed: int = None,
@@ -45,7 +48,7 @@ class MarketMakingEnv(gym.Env):
         self.portfolio = None
         if benchmark:
             self.benchmark_portfolio = None
-        self.reward_function = reward_function
+        self.reward_function = make_reward_function(rho)
         self.rng = None
 
         self.info = None
@@ -114,7 +117,7 @@ class MarketMakingEnv(gym.Env):
         )
         reward = self.reward_function(self.info)
         if self.benchmark:
-            benchmark_reward = base_reward_function(self.info, benchmark=True)
+            benchmark_reward = self.reward_function(self.info, benchmark=True)
 
         if self.portfolio.remaining_time == 1:
             reward -= self.portfolio.stock_held * new_price * self.transaction_fees
@@ -127,6 +130,7 @@ class MarketMakingEnv(gym.Env):
 
         if self.benchmark:
             reward = reward - benchmark_reward
+
         return np.array(list(state.values()), dtype=np.float32), reward, done, truncated, self.info[-1]
 
     def render(self):

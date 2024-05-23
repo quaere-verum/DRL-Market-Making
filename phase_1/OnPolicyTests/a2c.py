@@ -35,13 +35,16 @@ gym.envs.register('MarketMakingEnv', 'phase_1.gym_envs:MarketMakingEnv')
 
 if __name__ == '__main__':
     epsilon = 0.1
+    rho = 0.3
     env = gym.make('MarketMakingEnv', epsilon=epsilon, seed=seed_value)
     train_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
                                                     epsilon=epsilon,
+                                                    rho=rho,
                                                     seed=seed_value * k,
                                                     duration_bounds=(6, 12)) for k in range(20)])
     test_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
                                                    epsilon=epsilon,
+                                                   rho=0.,
                                                    seed=seed_value * k,
                                                    duration_bounds=(6, 12),
                                                    benchmark=True) for k in range(10)])
@@ -53,9 +56,9 @@ if __name__ == '__main__':
     optim = torch.optim.Adam(actor_critic.parameters(), lr=0.001)
 
     def dist_fn(mean):
-        return torch.distributions.Normal(mean, 0.2)
+        return torch.distributions.Normal(mean, 0.1)
     vf_coef = 0.7
-    ent_coef = 0.01
+    ent_coef = 0.05
     policy = A2CPolicy(
         actor=actor,
         critic=critic,
@@ -66,7 +69,7 @@ if __name__ == '__main__':
         vf_coef=vf_coef,
         ent_coef=ent_coef
     )
-    train_collector = Collector(policy, train_envs, VectorReplayBuffer(20000, len(train_envs)))
+    train_collector = Collector(policy, train_envs, VectorReplayBuffer(6000, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     train_result = OnpolicyTrainer(
         policy=policy,
@@ -74,7 +77,7 @@ if __name__ == '__main__':
         train_collector=train_collector,
         test_collector=test_collector,
         max_epoch=25,
-        step_per_epoch=20000,
+        step_per_epoch=50000,
         repeat_per_collect=5,
         episode_per_test=100,
         step_per_collect=2000,

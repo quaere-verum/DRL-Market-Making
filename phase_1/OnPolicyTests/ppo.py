@@ -36,13 +36,16 @@ gym.envs.register('MarketMakingEnv', 'phase_1.gym_envs:MarketMakingEnv')
 
 if __name__ == '__main__':
     epsilon = 0.1
+    rho = 0.1
     env = gym.make('MarketMakingEnv', epsilon=epsilon, seed=seed_value)
     train_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
                                                     epsilon=epsilon,
+                                                    rho=rho,
                                                     seed=seed_value * k,
                                                     duration_bounds=(6, 12)) for k in range(20)])
     test_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
                                                    epsilon=epsilon,
+                                                   rho=0.,
                                                    seed=seed_value * k,
                                                    duration_bounds=(6, 12),
                                                    benchmark=True) for k in range(10)])
@@ -63,7 +66,7 @@ if __name__ == '__main__':
         action_space=env.action_space,
         action_scaling=False
     )
-    train_collector = Collector(policy, train_envs, VectorReplayBuffer(10000, len(train_envs)))
+    train_collector = Collector(policy, train_envs, VectorReplayBuffer(2000, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     train_result = OnpolicyTrainer(
         policy=policy,
@@ -71,7 +74,7 @@ if __name__ == '__main__':
         train_collector=train_collector,
         test_collector=test_collector,
         max_epoch=10,
-        step_per_epoch=10000,
+        step_per_epoch=100000,
         repeat_per_collect=5,
         episode_per_test=100,
         step_per_collect=1000,
