@@ -35,7 +35,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 gym.envs.register('MarketMakingEnv', 'phase_1.gym_envs:MarketMakingEnv')
 
 if __name__ == '__main__':
-    epsilon = 0.1
+    epsilon = 0.01
     rho = 0.1
     env = gym.make('MarketMakingEnv', epsilon=epsilon, seed=seed_value)
     train_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',

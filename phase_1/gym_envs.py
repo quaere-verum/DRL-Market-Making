@@ -2,7 +2,7 @@ import numpy as np
 import gymnasium as gym
 from utils.history import History
 from utils.portfolio import SimplePortfolio
-from typing import Callable, Any
+from typing import Union, Tuple
 
 
 def make_reward_function(rho=0.):
@@ -25,19 +25,39 @@ class MarketMakingEnv(gym.Env):
                  epsilon: float = 0.1,
                  sigma: float = 0.1,
                  rho: float = 0.,
+                 action_bins: int = 0,
                  duration_bounds: tuple = (2, 30),
                  transaction_fees: float = 0.001,
                  seed: int = None,
                  benchmark: bool = False):
+        """
+        Gymnasium environment for option pricing.
+        :param epsilon: action space is [0, 1+epsilon]
+        :param sigma: standard deviation of the asset returns
+        :param rho: risk aversion in the reward function
+        :param action_bins: if 0, a continuous action space is used. Else, must be >= 2 and the action space is
+        discretised
+        :param duration_bounds: minimum and maximum duration
+        :param transaction_fees: transaction fees as a percentage of each transaction
+        :param seed: random number generation seed for reproducible results
+        :param benchmark: whether to benchmark the agent against Black-Scholes
+        """
         super().__init__()
         assert epsilon >= 0
+        assert action_bins == 0 or action_bins >= 2
 
         self.duration_bounds = duration_bounds
         self.transaction_fees = transaction_fees
         self.seed = seed
         self.benchmark = benchmark
+        self.action_bins = None
+        self.epsilon = epsilon
 
-        self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
+        if action_bins == 0:
+            self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
+        else:
+            self.action_bins = action_bins
+            self.action_space = gym.spaces.Discrete(action_bins)
         # stock price, remaining time, stock held, strike price, volatility forecast, Black-Scholes hedge
         self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
                                                 high=np.array([np.inf, duration_bounds[1] + 2,
@@ -53,7 +73,13 @@ class MarketMakingEnv(gym.Env):
 
         self.info = None
 
-    def reset(self, seed=None, options=None):
+    def _process_action(self, action: np.ndarray) -> np.float32:
+        if isinstance(self.action_space, gym.spaces.Discrete):
+            return np.float32(action[0]/self.action_bins*(1+self.epsilon))
+        else:
+            return np.float32(action[0])
+
+    def reset(self, seed: int = None, options: None = None) -> Tuple[np.ndarray, History]:
         if self.seed is not None:
             self.seed += 1
         self.rng = np.random.RandomState(self.seed)
@@ -89,8 +115,8 @@ class MarketMakingEnv(gym.Env):
         )
         return np.array(list(state.values()), dtype=np.float32), self.info[-1]
 
-    def step(self, action=None):
-        action = action[0]
+    def step(self, action: np.ndarray = None) -> Tuple[np.ndarray, float, bool, bool, History]:
+        action = self._process_action(action)
         done, truncated = False, False
         new_price = self.portfolio.stock_price * np.exp(self.rng.normal(0, self.sigma))
         self.portfolio.update_position(new_price, action)
@@ -133,5 +159,5 @@ class MarketMakingEnv(gym.Env):
 
         return np.array(list(state.values()), dtype=np.float32), reward, done, truncated, self.info[-1]
 
-    def render(self):
+    def render(self) -> None:
         pass

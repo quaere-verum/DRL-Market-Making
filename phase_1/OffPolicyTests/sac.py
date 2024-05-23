@@ -74,7 +74,7 @@ if __name__ == '__main__':
         tau=tau,
         exploration_noise='default'
     )
-    train_collector = Collector(policy, train_envs, VectorReplayBuffer(2000, len(train_envs)))
+    train_collector = Collector(policy, train_envs, VectorReplayBuffer(6000, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     train_result = OffpolicyTrainer(
         policy=policy,
@@ -82,9 +82,9 @@ if __name__ == '__main__':
         train_collector=train_collector,
         test_collector=test_collector,
         max_epoch=25,
-        step_per_epoch=10000,
+        step_per_epoch=50000,
         repeat_per_collect=5,
         episode_per_test=100,
-        step_per_collect=200,
+        step_per_collect=2000,
         logger=logger
     ).run()
