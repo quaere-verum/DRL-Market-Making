@@ -1,8 +1,5 @@
 from option_hedging.gym_envs import make_env
-import gymnasium as gym
 from config import options
-
-gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
 def main() -> None:
@@ -10,11 +7,11 @@ def main() -> None:
     assert model.lower() in options.keys()
     selection = options[model.lower()]
     kwargs = selection['kwargs']
-    benchmark = input(f'Benchmark against Black-Scholes? y/n\n ')
+    benchmark = input(f'Benchmark against Black-Scholes? y/n\n')
     assert benchmark.lower() in ('y', 'n')
     if benchmark.lower() == 'y':
         from option_hedging.black_scholes_benchmark import black_scholes_benchhmark
-        env = make_env(**kwargs)
+        env = make_env(seed=123, **kwargs)()
         mean, std = black_scholes_benchhmark(env, n_trials=1000)
         print(f'Black-Scholes benchmark: {mean} +/- {std}\n')
     trainer = selection['trainer'](**kwargs)

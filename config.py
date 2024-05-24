@@ -5,19 +5,19 @@ from option_hedging.OffPolicyTests.ddpg import ddpg_trial
 from option_hedging.OffPolicyTests.sac import sac_trial
 
 trainer_kwargs = {
-        'max_epoch': 10,
+        'max_epoch': 1,
         'batch_size': 512,
-        'step_per_epoch': 10000,
+        'step_per_epoch': 5000,
         'repeat_per_collect': 5,
         'episode_per_test': 1000,
         'update_per_step': 1.,
-        'step_per_collect': 2000,
+        'step_per_collect': 500,
         'verbose': True,
         'show_progress': True
 }
 
 ppo_kwargs = {
-        'train_kwargs': trainer_kwargs,
+        'trainer_kwargs': trainer_kwargs,
         'epsilon': 0.1,
         'sigma': 0.05,
         'rho': 0.2,
@@ -31,7 +31,7 @@ ppo_kwargs = {
 }
 
 sac_kwargs = {
-        'train_kwargs': trainer_kwargs,
+        'trainer_kwargs': trainer_kwargs,
         'epsilon': 0.1,
         'sigma': 0.05,
         'rho': 0.2,
@@ -46,7 +46,7 @@ sac_kwargs = {
 }
 
 ddpg_kwargs = {
-        'train_kwargs': trainer_kwargs,
+        'trainer_kwargs': trainer_kwargs,
         'epsilon': 0.1,
         'sigma': 0.05,
         'rho': 0.2,
@@ -60,7 +60,7 @@ ddpg_kwargs = {
 }
 
 a2c_kwargs = {
-        'train_kwargs': trainer_kwargs,
+        'trainer_kwargs': trainer_kwargs,
         'epsilon': 0.1,
         'sigma': 0.05,
         'rho': 0.2,
@@ -75,7 +75,7 @@ a2c_kwargs = {
 }
 
 dqn_kwargs = {
-        'train_kwargs': trainer_kwargs,
+        'trainer_kwargs': trainer_kwargs,
         'epsilon': 0.1,
         'sigma': 0.05,
         'rho': 0.2,
