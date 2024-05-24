@@ -78,7 +78,7 @@ def ddpg_trial(trainer_kwargs: Dict[str, int],
                                              duration_bounds=duration_bounds,
                                              seed=k * 50) for k in range(10)])
     actor_net = Net(state_shape=env.observation_space.shape,
-                    hidden_sizes=net_arch, concat=True, device=device)
+                    hidden_sizes=net_arch, device=device)
     critic_state_shape = (env.observation_space.shape[0] + 1,)
     critic_net = Net(state_shape=critic_state_shape,
                      hidden_sizes=net_arch, concat=True, device=device)

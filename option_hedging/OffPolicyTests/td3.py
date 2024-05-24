@@ -1,10 +1,10 @@
 import gymnasium as gym
 from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import SubprocVectorEnv, DummyVectorEnv
-from tianshou.policy import SACPolicy
+from tianshou.policy import TD3Policy
 from tianshou.trainer import OffpolicyTrainer
 from tianshou.utils.net.common import Net
-from tianshou.utils.net.continuous import ActorProb, Critic
+from tianshou.utils.net.continuous import Actor, Critic
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -37,18 +37,18 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
-def sac_trial(trainer_kwargs: Dict[str, int],
-              epsilon: float,
-              sigma: float,
-              rho: float,
-              tau: float,
-              action_bins: int,
-              duration_bounds: Tuple[int, int],
-              buffer_size: int,
-              lr: float,
-              subproc: bool = False,
-              net_arch: Tuple[int] = (64, 32, 16, 4)
-              ):
+def td3_trial(trainer_kwargs: Dict[str, int],
+               epsilon: float,
+               sigma: float,
+               rho: float,
+               tau: float,
+               action_bins: int,
+               duration_bounds: Tuple[int, int],
+               buffer_size: int,
+               lr: float,
+               subproc: bool = False,
+               net_arch: Tuple[int] = (64, 32, 16, 4)
+               ) -> OffpolicyTrainer:
 
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:
@@ -84,14 +84,14 @@ def sac_trial(trainer_kwargs: Dict[str, int],
                      hidden_sizes=net_arch, concat=True, device=device)
     critic2_net = Net(state_shape=critic_state_shape,
                       hidden_sizes=net_arch, concat=True, device=device)
-    actor = ActorProb(preprocess_net=actor_net, action_shape=env.action_space.shape, device=device).to(device)
+    actor = Actor(preprocess_net=actor_net, action_shape=env.action_space.shape, device=device).to(device)
     critic = Critic(preprocess_net=critic_net, device=device).to(device)
     critic2 = Critic(preprocess_net=critic2_net, device=device).to(device)
-    actor_optim = torch.optim.Adam(actor.parameters(), lr=lr)
     critic_optim = torch.optim.Adam(critic.parameters(), lr=lr)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=lr)
+    actor_optim = torch.optim.Adam(actor.parameters(), lr=lr)
 
-    policy = SACPolicy(
+    policy = TD3Policy(
         actor=actor,
         critic=critic,
         critic2=critic2,

@@ -3,6 +3,7 @@ from option_hedging.OnPolicyTests.ppo import ppo_trial
 from option_hedging.OffPolicyTests.dqn import dqn_trial
 from option_hedging.OffPolicyTests.ddpg import ddpg_trial
 from option_hedging.OffPolicyTests.sac import sac_trial
+from option_hedging.OffPolicyTests.td3 import td3_trial
 
 trainer_kwargs = {
         'max_epoch': 10,
@@ -59,6 +60,8 @@ ddpg_kwargs = {
         'net_arch': (64, 32, 16, 4),
 }
 
+td3_kwargs = ddpg_kwargs.copy()
+
 a2c_kwargs = {
         'trainer_kwargs': trainer_kwargs,
         'epsilon': 0.1,
@@ -101,6 +104,8 @@ options = {
                 'trainer': sac_trial},
         'ddpg': {'kwargs': ddpg_kwargs,
                  'trainer': ddpg_trial},
+        'td3': {'kwargs': td3_kwargs,
+                'trainer': td3_trial},
         'dqn': {'kwargs': dqn_kwargs,
                 'trainer': dqn_trial}
 }
