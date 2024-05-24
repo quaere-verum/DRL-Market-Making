@@ -1,10 +1,9 @@
 import gymnasium as gym
 from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import SubprocVectorEnv
-from tianshou.policy import SACPolicy
+from tianshou.policy import DQNPolicy
 from tianshou.trainer import OffpolicyTrainer
 from tianshou.utils.net.common import Net
-from tianshou.utils.net.continuous import ActorProb, Critic
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -35,6 +34,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 gym.envs.register('MarketMakingEnv', 'phase_1.gym_envs:MarketMakingEnv')
 
+
 if __name__ == '__main__':
     epsilon = 0.1
     rho = 0.3
@@ -50,36 +50,24 @@ if __name__ == '__main__':
                                            action_bins=10,
                                            duration_bounds=(6, 12),
                                            benchmark=True,
-                                           seed=k * 50) for k in range(10)])
-    actor_net = Net(state_shape=env.observation_space.shape,
-                    hidden_sizes=[64, 32, 16, 4], concat=True, device=device)
-    critic_state_shape = (env.observation_space.shape[0] + 1,)
-    critic_net = Net(state_shape=critic_state_shape,
-                     hidden_sizes=[64, 32, 16, 4], concat=True, device=device)
-    critic2_net = Net(state_shape=critic_state_shape,
-                      hidden_sizes=[64, 32, 16, 4], concat=True, device=device)
-    actor = ActorProb(preprocess_net=actor_net, action_shape=env.action_space.shape, device=device).to(device)
-    critic = Critic(preprocess_net=critic_net, device=device).to(device)
-    critic2 = Critic(preprocess_net=critic2_net, device=device).to(device)
-    actor_optim = torch.optim.Adam(actor.parameters(), lr=0.001)
-    critic_optim = torch.optim.Adam(critic.parameters(), lr=0.001)
-    critic2_optim = torch.optim.Adam(critic2.parameters(), lr=0.001)
-
+                                           seed=k*50) for k in range(10)])
+    net = Net(state_shape=env.observation_space.shape,
+              hidden_sizes=[64, 32, 16, 4], concat=True, device=device)
+    optim = torch.optim.Adam(net.parameters(), lr=0.001)
     tau = 0.01
 
-    policy = SACPolicy(
-        actor=actor,
-        critic=critic,
-        critic2=critic2,
-        actor_optim=actor_optim,
-        critic_optim=critic_optim,
-        critic2_optim=critic2_optim,
+    policy = DQNPolicy(
+        model=net,
+        optim=optim,
         action_space=env.action_space,
-        action_scaling=False,
-        tau=tau,
-        exploration_noise='default'
+        discount_factor=0.99,
+        estimation_step=1,
+        target_update_freq=0,
+        is_double=True,
+        clip_loss_grad=True,
+        observation_space=env.observation_space
     )
-    train_collector = Collector(policy, train_envs, VectorReplayBuffer(6000, len(train_envs)))
+    train_collector = Collector(policy, train_envs, VectorReplayBuffer(2000, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     train_result = OffpolicyTrainer(
         policy=policy,
@@ -87,9 +75,9 @@ if __name__ == '__main__':
         train_collector=train_collector,
         test_collector=test_collector,
         max_epoch=25,
-        step_per_epoch=50000,
+        step_per_epoch=2000,
         repeat_per_collect=5,
-        episode_per_test=100,
-        step_per_collect=2000,
+        episode_per_test=1000,
+        step_per_collect=500,
         logger=logger
     ).run()

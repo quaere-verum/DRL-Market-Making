@@ -2,7 +2,8 @@ import numpy as np
 import gymnasium as gym
 from utils.history import History
 from utils.portfolio import SimplePortfolio
-from typing import Union, Tuple
+from typing import Union, Tuple, List
+from gymnasium.utils.seeding import np_random
 
 
 def make_reward_function(rho=0.):
@@ -28,7 +29,6 @@ class MarketMakingEnv(gym.Env):
                  action_bins: int = 0,
                  duration_bounds: tuple = (2, 30),
                  transaction_fees: float = 0.001,
-                 seed: int = None,
                  benchmark: bool = False):
         """
         Gymnasium environment for option pricing.
@@ -39,7 +39,6 @@ class MarketMakingEnv(gym.Env):
         discretised
         :param duration_bounds: minimum and maximum duration
         :param transaction_fees: transaction fees as a percentage of each transaction
-        :param seed: random number generation seed for reproducible results
         :param benchmark: whether to benchmark the agent against Black-Scholes
         """
         super().__init__()
@@ -48,15 +47,13 @@ class MarketMakingEnv(gym.Env):
 
         self.duration_bounds = duration_bounds
         self.transaction_fees = transaction_fees
-        self.seed = seed
         self.benchmark = benchmark
-        self.action_bins = None
+        self.action_bins = action_bins
         self.epsilon = epsilon
 
         if action_bins == 0:
             self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
         else:
-            self.action_bins = action_bins
             self.action_space = gym.spaces.Discrete(action_bins)
         # stock price, remaining time, stock held, strike price, volatility forecast, Black-Scholes hedge
         self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
@@ -73,18 +70,23 @@ class MarketMakingEnv(gym.Env):
 
         self.info = None
 
-    def _process_action(self, action: np.ndarray) -> np.float32:
-        if isinstance(self.action_space, gym.spaces.Discrete):
-            return np.float32(action[0]/self.action_bins*(1+self.epsilon))
+    def seed(self, seed: int = None) -> List[int]:
+        if seed is not None:
+            seed = int(np.random.SeedSequence().generate_state(1)[0])
+        self.rng = np.random.default_rng(seed=seed)
+        return [seed]
+
+    def _process_action(self, action: Union[np.ndarray, np.int32]) -> np.float32:
+        if not isinstance(action, (np.ndarray, list, tuple)) and self.action_bins > 0:
+            return np.float32(action/self.action_bins*(1+self.epsilon))
+        elif self.action_bins > 0:
+            return np.float32(action[0] / self.action_bins * (1 + self.epsilon))
         else:
             return np.float32(action[0])
 
     def reset(self, seed: int = None, options: None = None) -> Tuple[np.ndarray, History]:
-        if self.seed is not None:
-            self.seed += 1
-        self.rng = np.random.RandomState(self.seed)
-        strike_price = np.clip(self.rng.normal(100,20), 50, 150)
-        expiry_time = self.rng.randint(low=self.duration_bounds[0], high=self.duration_bounds[1] + 1)
+        strike_price = 100
+        expiry_time = self.rng.integers(low=self.duration_bounds[0], high=self.duration_bounds[1] + 1)
         self.portfolio = SimplePortfolio(strike_price=strike_price,
                                          stock_price=100.,
                                          expiry_time=expiry_time,
@@ -161,3 +163,28 @@ class MarketMakingEnv(gym.Env):
 
     def render(self) -> None:
         pass
+
+
+def make_env(epsilon, rho, action_bins, duration_bounds, benchmark, seed):
+    def _init():
+        env = gym.make('MarketMakingEnv',
+                       epsilon=epsilon,
+                       rho=rho,
+                       action_bins=action_bins,
+                       duration_bounds=duration_bounds,
+                       benchmark=benchmark)
+        env.seed(seed)
+        return env
+    return _init
+
+
+if __name__ == '__main__':
+    test_env = MarketMakingEnv()
+    test_env.seed(None)
+    done, truncated = False, False
+    obs, info = test_env.reset()
+    prices = [obs[0]]
+    while not done and not truncated:
+        obs, reward, done, truncated, info = test_env.step(np.array([0.5]))
+        prices.append(obs[0])
+    print(prices)

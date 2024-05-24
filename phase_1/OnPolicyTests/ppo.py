@@ -13,6 +13,7 @@ import numpy as np
 import os
 import shutil
 from pathlib import Path
+from phase_1.gym_envs import make_env
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -37,18 +38,19 @@ gym.envs.register('MarketMakingEnv', 'phase_1.gym_envs:MarketMakingEnv')
 if __name__ == '__main__':
     epsilon = 0.01
     rho = 0.1
-    env = gym.make('MarketMakingEnv', epsilon=epsilon, seed=seed_value)
-    train_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
-                                                    epsilon=epsilon,
-                                                    rho=rho,
-                                                    seed=seed_value * k,
-                                                    duration_bounds=(6, 12)) for k in range(20)])
-    test_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
-                                                   epsilon=epsilon,
-                                                   rho=0.,
-                                                   seed=seed_value * k,
-                                                   duration_bounds=(6, 12),
-                                                   benchmark=True) for k in range(10)])
+    env = gym.make('MarketMakingEnv', epsilon=epsilon)
+    train_envs = SubprocVectorEnv([make_env(epsilon=epsilon,
+                                            rho=rho,
+                                            action_bins=10,
+                                            duration_bounds=(6, 12),
+                                            benchmark=False,
+                                            seed=k) for k in range(20)])
+    test_envs = SubprocVectorEnv([make_env(epsilon=epsilon,
+                                           rho=0.,
+                                           action_bins=10,
+                                           duration_bounds=(6, 12),
+                                           benchmark=True,
+                                           seed=k * 50) for k in range(10)])
     net = Net(state_shape=env.observation_space.shape, hidden_sizes=[64, 32, 16, 4], device=device)
 
     actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)

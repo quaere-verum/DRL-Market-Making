@@ -4,7 +4,7 @@ from tianshou.env import SubprocVectorEnv
 from tianshou.policy import A2CPolicy
 from tianshou.trainer import OnpolicyTrainer
 from tianshou.utils.net.common import ActorCritic, Net
-from tianshou.utils.net.continuous import Actor, Critic
+from tianshou.utils.net.discrete import Actor, Critic
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -13,6 +13,7 @@ import numpy as np
 import os
 import shutil
 from pathlib import Path
+from phase_1.gym_envs import make_env
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -36,18 +37,19 @@ gym.envs.register('MarketMakingEnv', 'phase_1.gym_envs:MarketMakingEnv')
 if __name__ == '__main__':
     epsilon = 0.1
     rho = 0.3
-    env = gym.make('MarketMakingEnv', epsilon=epsilon, seed=seed_value)
-    train_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
-                                                    epsilon=epsilon,
-                                                    rho=rho,
-                                                    seed=seed_value * k,
-                                                    duration_bounds=(6, 12)) for k in range(20)])
-    test_envs = SubprocVectorEnv([lambda: gym.make('MarketMakingEnv',
-                                                   epsilon=epsilon,
-                                                   rho=0.,
-                                                   seed=seed_value * k,
-                                                   duration_bounds=(6, 12),
-                                                   benchmark=True) for k in range(10)])
+    env = gym.make('MarketMakingEnv', epsilon=epsilon)
+    train_envs = SubprocVectorEnv([make_env(epsilon=epsilon,
+                                            rho=rho,
+                                            action_bins=10,
+                                            duration_bounds=(6, 12),
+                                            benchmark=False,
+                                            seed=k) for k in range(20)])
+    test_envs = SubprocVectorEnv([make_env(epsilon=epsilon,
+                                           rho=0.,
+                                           action_bins=10,
+                                           duration_bounds=(6, 12),
+                                           benchmark=True,
+                                           seed=k * 50) for k in range(10)])
     net = Net(state_shape=env.observation_space.shape, hidden_sizes=[64, 32, 16, 4], device=device)
 
     actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
@@ -69,17 +71,17 @@ if __name__ == '__main__':
         vf_coef=vf_coef,
         ent_coef=ent_coef
     )
-    train_collector = Collector(policy, train_envs, VectorReplayBuffer(6000, len(train_envs)))
+    train_collector = Collector(policy, train_envs, VectorReplayBuffer(2000, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     train_result = OnpolicyTrainer(
         policy=policy,
-        batch_size=256,
+        batch_size=1024,
         train_collector=train_collector,
         test_collector=test_collector,
         max_epoch=25,
-        step_per_epoch=50000,
-        repeat_per_collect=5,
+        step_per_epoch=10000,
+        repeat_per_collect=3,
         episode_per_test=100,
-        step_per_collect=2000,
+        step_per_collect=1000,
         logger=logger
     ).run()
