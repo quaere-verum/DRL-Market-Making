@@ -3,23 +3,21 @@ import gymnasium as gym
 from utils.history import History
 from utils.portfolio import SimplePortfolio
 from typing import Union, Tuple, List
-from gymnasium.utils.seeding import np_random
 
 
 def make_reward_function(rho=0.):
-    def base_reward_function(info, benchmark=False):
-        col = 'benchmark_stock_held' if benchmark else 'stock_held'
-        stock_amount_delta = info[col, -1] - info[col, -2]
+    def base_reward_function(info):
+        stock_amount_delta = info['stock_held', -1] - info['stock_held', -2]
         option_delta = (max(info['stock_price', -1] - info['strike_price', 0], 0) -
                         max(info['stock_price', -2] - info['strike_price', 0], 0))
         transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_amount_delta)
-        stock_delta = info[col, -2] * (info['stock_price', -1] - info['stock_price', -2])
+        stock_delta = info['stock_held', -2] * (info['stock_price', -1] - info['stock_price', -2])
         portfolio_delta = stock_delta - option_delta
-        return portfolio_delta - transaction_cost - rho*portfolio_delta ** 2
+        return portfolio_delta - transaction_cost - rho/2*portfolio_delta ** 2
     return base_reward_function
 
 
-class MarketMakingEnv(gym.Env):
+class OptionHedgingEnv(gym.Env):
     metadata = {'render_modes': ['logs']}
 
     def __init__(self,
@@ -31,7 +29,7 @@ class MarketMakingEnv(gym.Env):
                  transaction_fees: float = 0.001,
                  benchmark: bool = False):
         """
-        Gymnasium environment for option pricing.
+        Gymnasium environment for option hedging.
         :param epsilon: action space is [0, 1+epsilon]
         :param sigma: standard deviation of the asset returns
         :param rho: risk aversion in the reward function
@@ -39,7 +37,6 @@ class MarketMakingEnv(gym.Env):
         discretised
         :param duration_bounds: minimum and maximum duration
         :param transaction_fees: transaction fees as a percentage of each transaction
-        :param benchmark: whether to benchmark the agent against Black-Scholes
         """
         super().__init__()
         assert epsilon >= 0
@@ -55,16 +52,14 @@ class MarketMakingEnv(gym.Env):
             self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
         else:
             self.action_space = gym.spaces.Discrete(action_bins)
-        # stock price, remaining time, stock held, strike price, volatility forecast, Black-Scholes hedge
-        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
-                                                high=np.array([np.inf, duration_bounds[1] + 2,
-                                                               1 + epsilon, np.inf, np.inf, 1]).astype(np.float32),
-                                                shape=(6,))
+        # stock price, remaining time, stock held, strike price
+        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0]).astype(np.float32),
+                                                high=np.array([1e3, duration_bounds[1] + 2,
+                                                               1 + epsilon, 1e3]).astype(np.float32),
+                                                shape=(4,))
 
         self.sigma = sigma
         self.portfolio = None
-        if benchmark:
-            self.benchmark_portfolio = None
         self.reward_function = make_reward_function(rho)
         self.rng = None
 
@@ -81,38 +76,32 @@ class MarketMakingEnv(gym.Env):
             return np.float32(action/self.action_bins*(1+self.epsilon))
         elif self.action_bins > 0:
             return np.float32(action[0] / self.action_bins * (1 + self.epsilon))
-        else:
+        elif isinstance(action, (np.ndarray, list, tuple)):
             return np.float32(action[0])
+        else:
+            return np.float32(action)
 
     def reset(self, seed: int = None, options: None = None) -> Tuple[np.ndarray, History]:
+        if self.rng is None:
+            self.seed()
         strike_price = 100
         expiry_time = self.rng.integers(low=self.duration_bounds[0], high=self.duration_bounds[1] + 1)
         self.portfolio = SimplePortfolio(strike_price=strike_price,
                                          stock_price=100.,
                                          expiry_time=expiry_time,
                                          transaction_fees=self.transaction_fees)
-        if self.benchmark:
-            self.benchmark_portfolio = SimplePortfolio(strike_price=strike_price,
-                                                       stock_price=100.,
-                                                       expiry_time=expiry_time,
-                                                       transaction_fees=self.transaction_fees)
-        self.info = History(max_size=self.duration_bounds[1])
 
-        black_scholes_hedge = self.portfolio.black_scholes_hedge(self.sigma)
+        self.info = History(max_size=self.duration_bounds[1])
 
         state = {
             'stock_price': self.portfolio.stock_price,
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
-            'strike_price': self.portfolio.strike_price,
-            'volatility_forecast': self.sigma,
-            'black_scholes_hedge': black_scholes_hedge
+            'strike_price': self.portfolio.strike_price
         }
         self.info.set(
             transaction_fees=self.transaction_fees,
             reward=0,
-            benchmark_stock_held=0 if self.benchmark else None,
-            benchmark_reward=0 if self.benchmark else None,
             **state
         )
         return np.array(list(state.values()), dtype=np.float32), self.info[-1]
@@ -122,42 +111,25 @@ class MarketMakingEnv(gym.Env):
         done, truncated = False, False
         new_price = self.portfolio.stock_price * np.exp(self.rng.normal(0, self.sigma))
         self.portfolio.update_position(new_price, action)
-        black_scholes_hedge = self.portfolio.black_scholes_hedge(self.sigma)
-
-        if self.benchmark:
-            benchmark_hedge = self.benchmark_portfolio.black_scholes_hedge(self.sigma)
-            self.benchmark_portfolio.update_position(new_price, benchmark_hedge)
 
         state = {
             'stock_price': self.portfolio.stock_price,
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
-            'strike_price': self.portfolio.strike_price,
-            'volatility_forecast': self.sigma,
-            'black_scholes_hedge': black_scholes_hedge
+            'strike_price': self.portfolio.strike_price
         }
         self.info.add(
             transaction_fees=self.transaction_fees,
             reward=0,
-            benchmark_stock_held=self.benchmark_portfolio.stock_held if self.benchmark else None,
-            benchmark_reward=0 if self.benchmark else None,
             **state
         )
         reward = self.reward_function(self.info)
-        if self.benchmark:
-            benchmark_reward = self.reward_function(self.info, benchmark=True)
 
         if self.portfolio.remaining_time == 1:
             reward -= self.portfolio.stock_held * new_price * self.transaction_fees
-            if self.benchmark:
-                benchmark_reward -= self.portfolio.stock_held * new_price * self.transaction_fees
             done = True
 
-        self.info['benchmark_reward', -1] = benchmark_reward if self.benchmark else None
         self.info['reward', -1] = reward
-
-        if self.benchmark:
-            reward = reward - benchmark_reward
 
         return np.array(list(state.values()), dtype=np.float32), reward, done, truncated, self.info[-1]
 
@@ -165,26 +137,36 @@ class MarketMakingEnv(gym.Env):
         pass
 
 
-def make_env(epsilon, rho, action_bins, duration_bounds, benchmark, seed):
+def make_env(epsilon, sigma, rho, action_bins, duration_bounds, seed):
     def _init():
-        env = gym.make('MarketMakingEnv',
+        env = gym.make('OptionHedgingEnv',
                        epsilon=epsilon,
+                       sigma=sigma,
                        rho=rho,
                        action_bins=action_bins,
-                       duration_bounds=duration_bounds,
-                       benchmark=benchmark)
+                       duration_bounds=duration_bounds)
         env.seed(seed)
         return env
     return _init
 
 
 if __name__ == '__main__':
-    test_env = MarketMakingEnv()
-    test_env.seed(None)
-    done, truncated = False, False
-    obs, info = test_env.reset()
-    prices = [obs[0]]
-    while not done and not truncated:
-        obs, reward, done, truncated, info = test_env.step(np.array([0.5]))
-        prices.append(obs[0])
-    print(prices)
+    import matplotlib.pyplot as plt
+    sigma = 0.05
+    env = OptionHedgingEnv(sigma=sigma, duration_bounds=(6, 13))
+    env.seed(None)
+    trials = 100
+    price_series = np.zeros((trials, 20))
+    for trial in range(trials):
+        done, truncated = False, False
+        obs, info = env.reset()
+        step = 0
+        price_series[trial, step] = obs[0]
+        while not done and not truncated:
+            step += 1
+            hedge = env.portfolio.black_scholes_hedge(sigma)
+            obs, reward, done, truncated, info = env.step(np.array([hedge]))
+            price_series[trial, step] = obs[0]
+    price_series = np.where(price_series == 0, np.nan, price_series)
+    plt.plot(price_series.T)
+    plt.show()
