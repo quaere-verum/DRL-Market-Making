@@ -13,6 +13,7 @@ import os
 import shutil
 from pathlib import Path
 from option_hedging.gym_envs import make_env
+from typing import Dict, Tuple
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -35,22 +36,22 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
-def dqn_trial(trainer_kwargs,
-              epsilon,
-              sigma,
-              rho,
-              discount_factor,
-              estimation_step,
-              target_update_freq,
-              is_double,
-              clip_loss_grad,
-              action_bins,
-              duration_bounds,
-              buffer_size,
-              lr,
-              subproc=False,
-              net_arch=(64, 32, 16, 4)
-              ):
+def dqn_trial(trainer_kwargs: Dict[str, int],
+              epsilon: float,
+              sigma: float,
+              rho: float,
+              discount_factor: float,
+              estimation_step: int,
+              target_update_freq: int,
+              is_double: bool,
+              clip_loss_grad: bool,
+              action_bins: int,
+              duration_bounds: Tuple[int, int],
+              buffer_size: int,
+              lr: float,
+              subproc: bool = False,
+              net_arch: Tuple[int] = (64, 32, 16, 4)
+              ) -> OffpolicyTrainer:
 
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:

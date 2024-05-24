@@ -5,7 +5,7 @@ from config import options
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
-def main():
+def main() -> None:
     model = input(f'Select a model: {list(options.keys())}\n')
     assert model.lower() in options.keys()
     selection = options[model.lower()]

@@ -14,6 +14,7 @@ import os
 import shutil
 from pathlib import Path
 from option_hedging.gym_envs import make_env
+from typing import Dict, Tuple
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -35,19 +36,19 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
-def a2c_trial(trainer_kwargs,
-              epsilon,
-              sigma,
-              rho,
-              action_bins,
-              duration_bounds,
-              buffer_size,
-              lr,
-              vf_coef=0.5,
-              ent_coef=0.01,
-              subproc=False,
-              net_arch=(64, 32, 16, 4),
-              dist_std=0.2
+def a2c_trial(trainer_kwargs: Dict[str, int],
+              epsilon: float,
+              sigma: float,
+              rho: float,
+              action_bins: int,
+              duration_bounds: Tuple[int, int],
+              buffer_size: int,
+              lr: float,
+              vf_coef: float = 0.5,
+              ent_coef: float = 0.01,
+              subproc: bool = False,
+              net_arch: Tuple[int] = (64, 32, 16, 4),
+              dist_std: float = 0.2
               ):
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:
