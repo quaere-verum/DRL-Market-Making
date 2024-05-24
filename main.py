@@ -1,9 +1,25 @@
-from option_hedging.OnPolicyTests.a2c import a2c_trial
-from option_hedging.OnPolicyTests.ppo import ppo_trial
-from option_hedging.OffPolicyTests.dqn import dqn_trial
-from option_hedging.OffPolicyTests.ddpg import ddpg_trial
-from option_hedging.OffPolicyTests.sac import sac_trial
+from option_hedging.gym_envs import make_env
 import gymnasium as gym
+from config import options
 
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
+
+def main():
+    model = input(f'Select a model: {list(options.keys())}\n')
+    assert model.lower() in options.keys()
+    selection = options[model.lower()]
+    kwargs = selection['kwargs']
+    benchmark = input(f'Benchmark against Black-Scholes? y/n\n ')
+    assert benchmark.lower() in ('y', 'n')
+    if benchmark.lower() == 'y':
+        from option_hedging.black_scholes_benchmark import black_scholes_benchhmark
+        env = make_env(**kwargs)
+        mean, std = black_scholes_benchhmark(env, n_trials=1000)
+        print(f'Black-Scholes benchmark: {mean} +/- {std}\n')
+    trainer = selection['trainer'](**kwargs)
+    trainer.run()
+
+
+if __name__ == '__main__':
+    main()

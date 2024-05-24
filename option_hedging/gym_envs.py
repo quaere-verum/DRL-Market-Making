@@ -137,7 +137,7 @@ class OptionHedgingEnv(gym.Env):
         pass
 
 
-def make_env(epsilon, sigma, rho, action_bins, duration_bounds, seed):
+def make_env(epsilon, sigma, rho, action_bins, duration_bounds, seed, **kwargs):
     def _init():
         env = gym.make('OptionHedgingEnv',
                        epsilon=epsilon,

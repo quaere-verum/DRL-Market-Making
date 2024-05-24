@@ -1,3 +1,9 @@
+from option_hedging.OnPolicyTests.a2c import a2c_trial
+from option_hedging.OnPolicyTests.ppo import ppo_trial
+from option_hedging.OffPolicyTests.dqn import dqn_trial
+from option_hedging.OffPolicyTests.ddpg import ddpg_trial
+from option_hedging.OffPolicyTests.sac import sac_trial
+
 trainer_kwargs = {
         'max_epoch': 10,
         'batch_size': 512,
@@ -85,4 +91,17 @@ dqn_kwargs = {
         'subproc': False,
         'net_arch': (64, 32, 16, 4),
         'dist_std': 0.2
+}
+
+options = {
+        'ppo': {'kwargs': ppo_kwargs,
+                'trainer': ppo_trial},
+        'a2c': {'kwargs': a2c_kwargs,
+                'trainer': a2c_trial},
+        'sac': {'kwargs': sac_kwargs,
+                'trainer': sac_trial},
+        'ddpg': {'kwargs': ddpg_kwargs,
+                 'trainer': ddpg_trial},
+        'dqn': {'kwargs': dqn_kwargs,
+                'trainer': dqn_trial}
 }
