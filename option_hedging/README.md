@@ -14,14 +14,48 @@ Let $P_t$ denote the value of our portfolio at time $t$. This consists of the st
 ### Note
 We will include a "benchmark" parameter in the environment. If set to `True`, the reward will be the policy's reward relative to the benchmark reward (i.e. Black-Scholes).  
 
-## Experimental observations
-### Constant volatility
+# Experimental observations
+## Constant volatility
+### 23/05/2024
 Both a random agent and a basic Black-Scholes agent will, on average, make a loss. From experiments, it is quite evident that the on-policy algorithms are able to outperform both of these on average, and in fact make a profit. However, the standard deviation is much greater, even when increasing the value of $\rho$. Possible solutions:
 1. Generate more training data
 2. Discretise the action space
 3. Enhance the network architecture and/or engineer relevant features for the model
 
+### 24/05/2024
+After trying some different network architectures, it appears PPO can significantly outperform the baseline,
+both in terms of mean reward and in terms of standard deviation.
+This was observed within a relatively short training process (~100k steps), so it is likely that performance
+can be increased with better hyperparameters, network architecture, and data collection.
 
+Benchmark: -17.02 +/- 21.23
+PPO: -5.39 +/- 8.78
+
+Parameters used:
 ```python
-
+trainer_kwargs = {
+        'max_epoch': 10,
+        'batch_size': 512,
+        'step_per_epoch': 10000,
+        'repeat_per_collect': 5,
+        'episode_per_test': 1000,
+        'update_per_step': 1.,
+        'step_per_collect': 2000,
+        'verbose': True,
+        'show_progress': True
+}
+ppo_kwargs = {
+        'trainer_kwargs': trainer_kwargs,
+        'epsilon': 0.1,
+        'sigma': 0.05,
+        'rho': 0.2,
+        'action_bins': 32,
+        'duration_bounds': (6, 12),
+        'buffer_size': 6000,
+        'lr': 0.001,
+        'subproc': False,
+        'net_arch': tuple(32 for k in range(10)),
+        'dist_std': 0.1
+}
 ```
+

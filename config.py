@@ -5,13 +5,13 @@ from option_hedging.OffPolicyTests.ddpg import ddpg_trial
 from option_hedging.OffPolicyTests.sac import sac_trial
 
 trainer_kwargs = {
-        'max_epoch': 1,
+        'max_epoch': 10,
         'batch_size': 512,
-        'step_per_epoch': 5000,
+        'step_per_epoch': 10000,
         'repeat_per_collect': 5,
         'episode_per_test': 1000,
         'update_per_step': 1.,
-        'step_per_collect': 500,
+        'step_per_collect': 2000,
         'verbose': True,
         'show_progress': True
 }
@@ -21,13 +21,13 @@ ppo_kwargs = {
         'epsilon': 0.1,
         'sigma': 0.05,
         'rho': 0.2,
-        'action_bins': 25,
+        'action_bins': 32,
         'duration_bounds': (6, 12),
-        'buffer_size': 2000,
+        'buffer_size': 6000,
         'lr': 0.001,
         'subproc': False,
-        'net_arch': (64, 32, 16, 4),
-        'dist_std': 0.2
+        'net_arch': tuple(32 for k in range(10)),
+        'dist_std': 0.1
 }
 
 sac_kwargs = {
@@ -89,8 +89,7 @@ dqn_kwargs = {
         'buffer_size': 2000,
         'lr': 0.001,
         'subproc': False,
-        'net_arch': (64, 32, 16, 4),
-        'dist_std': 0.2
+        'net_arch': tuple(32 for k in range(10))
 }
 
 options = {
