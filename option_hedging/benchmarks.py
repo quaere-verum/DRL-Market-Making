@@ -34,11 +34,11 @@ def random_agent_benchmark(env: OptionHedgingEnv, n_trials: int) -> Tuple[float,
 if __name__ == '__main__':
     env = make_env(epsilon=0.01,
                    sigma=0.2,
-                   rho=0.01,
+                   rho=0.,
                    action_bins=0,
                    T=1,
                    rebalance_frequency=100,
                    seed=123,
-                   transaction_fees=0.001)()
+                   transaction_fees=0.)()
     print(black_scholes_benchmark(env, 100))
     print(random_agent_benchmark(env, 100))

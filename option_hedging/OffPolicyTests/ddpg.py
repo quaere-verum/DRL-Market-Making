@@ -14,7 +14,7 @@ import os
 import shutil
 from pathlib import Path
 from option_hedging.gym_envs import make_env
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -36,12 +36,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 def ddpg_trial(trainer_kwargs: Dict[str, int],
-               epsilon: float,
-               sigma: float,
-               rho: float,
+               env_kwargs: Dict[str, Any],
                tau: float,
-               action_bins: int,
-               duration_bounds: Tuple[int, int],
                buffer_size: int,
                lr: float,
                subproc: bool = False,
@@ -50,31 +46,11 @@ def ddpg_trial(trainer_kwargs: Dict[str, int],
 
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:
-        train_envs = SubprocVectorEnv([make_env(epsilon=epsilon,
-                                                sigma=sigma,
-                                                rho=rho,
-                                                action_bins=action_bins,
-                                                duration_bounds=duration_bounds,
-                                                seed=k) for k in range(20)])
-        test_envs = SubprocVectorEnv([make_env(epsilon=epsilon,
-                                               sigma=sigma,
-                                               rho=0.,
-                                               action_bins=action_bins,
-                                               duration_bounds=duration_bounds,
-                                               seed=k * 50) for k in range(10)])
+        train_envs = SubprocVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
+        test_envs = SubprocVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
     else:
-        train_envs = DummyVectorEnv([make_env(epsilon=epsilon,
-                                              sigma=sigma,
-                                              rho=rho,
-                                              action_bins=action_bins,
-                                              duration_bounds=duration_bounds,
-                                              seed=k) for k in range(20)])
-        test_envs = DummyVectorEnv([make_env(epsilon=epsilon,
-                                             sigma=sigma,
-                                             rho=0.,
-                                             action_bins=action_bins,
-                                             duration_bounds=duration_bounds,
-                                             seed=k * 50) for k in range(10)])
+        train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
+        test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
     actor_net = Net(state_shape=env.observation_space.shape,
                     hidden_sizes=net_arch, device=device)
     critic_state_shape = (env.observation_space.shape[0] + 1,)
