@@ -18,11 +18,11 @@ Determining the value $P_t$ cannot be done umambiguously, since we hold a short 
 3. Consider the value of the option to be $0$ until the expiry date, at which point its value is the payout value
 
 Each of these choices has certain disadvantages. The first requires us to assume an option pricing model, the second valuates the option in a way that is clearly incorrect, and the third would distribute the rewards per step very unevenly making it difficult for the DRL agent to learn the right policy. We will therefore discard the third choice as it would presumably lead to instability. The second choice does have the advantage that it distributes rewards more evenly, and the sum of the reward component coming from the option will add up to the payoff at expiry.
-> **Lemma**. Let $P_t=\max(S_t-K, 0)$. If $S(0)\leq K$ then $\mathbb{E}[\sum_{t=1}^T P_t-P_{t-1}]=\mathbb{E}[C(T)]$ where $C(T)$ is the option value. If $S_0 < K$, the same holds up to an additive constant of $\max(S_0-K,0)$ 
+> **Lemma**. Let $P_t=\max(S_t-K, 0)$. If $S(0)\leq K$ then $\mathbb{E}[\sum P_t-P_{t-1}]=\mathbb{E}[C(T)]$ where $C(T)$ is the option value. If $S_0 < K$, the same holds up to an additive constant of $\max(S_0-K,0)$ 
 
 
 **Proof.** We have 
-$\mathbb{E}[\sum_{t=1}^TP_t-P_{t-1}]=\sum_{t=1}^T\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum_{t=1}^T\mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$ 
+$\mathbb{E}[\sum P_t-P_{t-1}]=\sum\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum \mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$ 
 where we have used that $\mathbb{E}[P_0]=0$, assuming $S(0)\leq K$. If $S_0 > K$ then the expected sum of rewards is still the expected option value, up to an additive constant.
 
 Therefore, we should be able to use both 1. and 2. to teach an agent how to hedge an option.
