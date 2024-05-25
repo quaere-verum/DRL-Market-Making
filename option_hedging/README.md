@@ -22,7 +22,7 @@ Each of these choices has certain disadvantages. The first requires us to assume
 
 
 **Proof.** We have 
-$\mathbb{E}[\sum P_t-P_{t-1}]=\sum\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum \mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$ 
+$\mathbb{E}[\sum P_t-P_{t-1}]=\sum^{T-1}\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum_{t=1} \mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$ 
 where we have used that $\mathbb{E}[P_0]=0$, assuming $S(0)\leq K$. If $S_0 > K$ then the expected sum of rewards is still the expected option value, up to an additive constant.
 
 Therefore, we should be able to use both 1. and 2. to teach an agent how to hedge an option.
