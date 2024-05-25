@@ -1,9 +1,9 @@
 import numpy as np
 from typing import Tuple
-from gymnasium import Env
+from option_hedging.gym_envs import OptionHedgingEnv
 
 
-def black_scholes_benchhmark(env: Env, n_trials: int) -> Tuple[float, float]:
+def black_scholes_benchmark(env: OptionHedgingEnv, n_trials: int, verbose: bool = False) -> Tuple[float, float]:
     rewards = np.zeros(n_trials)
     for trial in range(n_trials):
         _, _ = env.reset()
@@ -17,7 +17,7 @@ def black_scholes_benchhmark(env: Env, n_trials: int) -> Tuple[float, float]:
     return np.mean(rewards), np.std(rewards)
 
 
-def random_agent_benchmark(env: Env, n_trials: int) -> Tuple[float, float]:
+def random_agent_benchmark(env: OptionHedgingEnv, n_trials: int) -> Tuple[float, float]:
     rewards = np.zeros(n_trials)
     for trial in range(n_trials):
         _, _ = env.reset()

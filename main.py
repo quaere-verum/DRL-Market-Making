@@ -10,9 +10,9 @@ def main() -> None:
     benchmark = input(f'Benchmark against Black-Scholes? y/n\n')
     assert benchmark.lower() in ('y', 'n')
     if benchmark.lower() == 'y':
-        from option_hedging.benchmarks import black_scholes_benchhmark
+        from option_hedging.benchmarks import black_scholes_benchmark
         env = make_env(seed=123, **kwargs)()
-        mean, std = black_scholes_benchhmark(env, n_trials=1000)
+        mean, std = black_scholes_benchmark(env, n_trials=1000)
         print(f'Black-Scholes benchmark: {mean} +/- {std}\n')
     random_benchmark = input(f'Benchmark against random agent? y/n\n')
     assert random_benchmark.lower() in ('y', 'n')
