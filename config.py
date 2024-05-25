@@ -22,7 +22,8 @@ env_kwargs = {
         'sigma': 0.05,
         'rho': 0.2,
         'action_bins': 32,
-        'duration_bounds': (6, 12),
+        'T': 1,
+        'rebalance_frequency': 10
 }
 
 ppo_kwargs = {

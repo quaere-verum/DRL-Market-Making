@@ -35,8 +35,6 @@ torch.backends.cudnn.benchmark = False
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
-
 
 def epsilon_greedy_scheduler(epsilon_greedy, policy, max_steps):
     if epsilon_greedy is None:

@@ -1,42 +1,21 @@
 import numpy as np
 import gymnasium as gym
-from scipy.stats import norm
 from utils.history import History
 from utils.portfolio import SimplePortfolio
 from typing import Union, Tuple, List
 
+gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
-def make_reward_function(rho=0., mode='model_free'):
-    if mode == 'model_free':
-        def reward_function(info):
-            stock_amount_delta = info['stock_held', -1] - info['stock_held', -2]
-            option_delta = (max(info['stock_price', -1] - info['strike_price', 0], 0) -
-                            max(info['stock_price', -2] - info['strike_price', 0], 0))
-            transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_amount_delta)
-            stock_delta = info['stock_held', -2] * (info['stock_price', -1] - info['stock_price', -2])
-            portfolio_delta = stock_delta - option_delta
-            return portfolio_delta - transaction_cost - rho/2*portfolio_delta ** 2
-    else:
-        def option_valuation(S, K, T, sigma):
-            d_plus = 1/(sigma*np.sqrt(T))*np.log(S/K)+sigma**2/2*T
-            d_minus = d_plus - sigma*np.sqrt(T)
-            return norm.cdf(d_plus)*S-norm.cdf(d_minus)*K
 
-        def reward_function(info):
-            stock_amount_delta = info['stock_held', -1] - info['stock_held', -2]
-            option_valuation_old = option_valuation(info['stock_price', -2],
-                                                    info['strike_price', -2],
-                                                    info['remaining_time', -2],
-                                                    info['sigma', -2])
-            option_valuation_new = option_valuation(info['stock_price', -1],
-                                                    info['strike_price', -1],
-                                                    info['remaining_time', -1],
-                                                    info['sigma', -1])
-            option_delta = option_valuation_new - option_valuation_old
-            transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_amount_delta)
-            stock_delta = info['stock_held', -2] * (info['stock_price', -1] - info['stock_price', -2])
-            portfolio_delta = stock_delta - option_delta
-            return portfolio_delta - transaction_cost - rho / 2 * portfolio_delta ** 2
+def make_reward_function(rho=0.):
+
+    def reward_function(info):
+        stock_amount_delta = info['stock_held', -1] - info['stock_held', -2]
+        option_delta = info['option_valuation', -1] - info['option_valuation', -2]
+        transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_amount_delta)
+        stock_delta = info['stock_held', -2] * (info['stock_price', -1] - info['stock_price', -2])
+        portfolio_delta = stock_delta - option_delta
+        return portfolio_delta - transaction_cost - rho / 2 * portfolio_delta ** 2
 
     return reward_function
 
@@ -49,9 +28,9 @@ class OptionHedgingEnv(gym.Env):
                  sigma: float = 0.1,
                  rho: float = 0.,
                  action_bins: int = 0,
-                 duration_bounds: tuple = (2, 30),
+                 T: int = 1,
+                 rebalance_frequency: int = 12,
                  transaction_fees: float = 0.001,
-                 mode: str = 'model_free',
                  benchmark: bool = False):
         """
         Gymnasium environment for option hedging.
@@ -66,9 +45,10 @@ class OptionHedgingEnv(gym.Env):
         super().__init__()
         assert epsilon >= 0
         assert action_bins == 0 or action_bins >= 2
-        assert mode.lower() in ('model_free', 'gbm')
+        assert rebalance_frequency >= 1 and isinstance(rebalance_frequency, int)
 
-        self.duration_bounds = duration_bounds
+        self.T = T
+        self.dt = 1/rebalance_frequency
         self.transaction_fees = transaction_fees
         self.benchmark = benchmark
         self.action_bins = action_bins
@@ -78,15 +58,15 @@ class OptionHedgingEnv(gym.Env):
             self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
         else:
             self.action_space = gym.spaces.Discrete(action_bins)
-        # stock price, remaining time, stock held, strike price
-        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0]).astype(np.float32),
-                                                high=np.array([1e3, duration_bounds[1] + 2,
-                                                               1 + epsilon, 1e3]).astype(np.float32),
-                                                shape=(4,))
+        # stock price, remaining time, stock held, strike price, option_valuation
+        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0]).astype(np.float32),
+                                                high=np.array([1e3, T+1,
+                                                               1 + epsilon, 1e3, 1e3]).astype(np.float32),
+                                                shape=(5,))
 
         self.sigma = sigma
         self.portfolio = None
-        self.reward_function = make_reward_function(rho=rho, mode=mode.lower())
+        self.reward_function = make_reward_function(rho=rho)
         self.rng = None
 
         self.info = None
@@ -111,19 +91,20 @@ class OptionHedgingEnv(gym.Env):
         if self.rng is None:
             self.seed()
         strike_price = 100
-        expiry_time = self.rng.integers(low=self.duration_bounds[0], high=self.duration_bounds[1] + 1)
         self.portfolio = SimplePortfolio(strike_price=strike_price,
                                          stock_price=100.,
-                                         expiry_time=expiry_time,
+                                         expiry_time=self.T,
+                                         dt=self.dt,
                                          transaction_fees=self.transaction_fees)
 
-        self.info = History(max_size=self.duration_bounds[1])
+        self.info = History(max_size=self.T*int(1/self.dt))
 
         state = {
             'stock_price': self.portfolio.stock_price,
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
-            'strike_price': self.portfolio.strike_price
+            'strike_price': self.portfolio.strike_price,
+            'option_valuation': self.portfolio.option_valuation(self.sigma)
         }
         self.info.set(
             transaction_fees=self.transaction_fees,
@@ -136,14 +117,15 @@ class OptionHedgingEnv(gym.Env):
     def step(self, action: np.ndarray = None) -> Tuple[np.ndarray, float, bool, bool, History]:
         action = self._process_action(action)
         done, truncated = False, False
-        new_price = self.portfolio.stock_price * np.exp(self.rng.normal(0, self.sigma))
+        new_price = self.portfolio.stock_price * np.exp(self.rng.normal(0, self.sigma*np.sqrt(self.dt)))
         self.portfolio.update_position(new_price, action)
 
         state = {
             'stock_price': self.portfolio.stock_price,
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
-            'strike_price': self.portfolio.strike_price
+            'strike_price': self.portfolio.strike_price,
+            'option_valuation': self.portfolio.option_valuation(self.sigma)
         }
         self.info.add(
             transaction_fees=self.transaction_fees,
@@ -153,7 +135,7 @@ class OptionHedgingEnv(gym.Env):
         )
         reward = self.reward_function(self.info)
 
-        if self.portfolio.remaining_time == 1:
+        if np.isclose(self.portfolio.remaining_time, self.dt):
             reward -= self.portfolio.stock_held * new_price * self.transaction_fees
             done = True
 
@@ -165,36 +147,24 @@ class OptionHedgingEnv(gym.Env):
         pass
 
 
-def make_env(epsilon, sigma, rho, action_bins, duration_bounds, seed, **kwargs):
+def make_env(epsilon: float,
+             sigma: float,
+             rho: float,
+             action_bins: int,
+             T: int,
+             rebalance_frequency: int,
+             seed: int | None,
+             transaction_fees: float = 0.001,
+             **kwargs):
     def _init():
         env = gym.make('OptionHedgingEnv',
                        epsilon=epsilon,
                        sigma=sigma,
                        rho=rho,
                        action_bins=action_bins,
-                       duration_bounds=duration_bounds)
+                       T=T,
+                       rebalance_frequency=rebalance_frequency,
+                       transaction_fees=transaction_fees)
         env.seed(seed)
         return env
     return _init
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    sigma = 0.05
-    env = OptionHedgingEnv(sigma=sigma, duration_bounds=(6, 13))
-    env.seed(None)
-    trials = 100
-    price_series = np.zeros((trials, 20))
-    for trial in range(trials):
-        done, truncated = False, False
-        obs, info = env.reset()
-        step = 0
-        price_series[trial, step] = obs[0]
-        while not done and not truncated:
-            step += 1
-            hedge = env.portfolio.black_scholes_hedge(sigma)
-            obs, reward, done, truncated, info = env.step(np.array([hedge]))
-            price_series[trial, step] = obs[0]
-    price_series = np.where(price_series == 0, np.nan, price_series)
-    plt.plot(price_series.T)
-    plt.show()

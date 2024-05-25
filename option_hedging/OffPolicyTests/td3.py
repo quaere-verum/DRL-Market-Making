@@ -34,8 +34,6 @@ torch.backends.cudnn.benchmark = False
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
-
 
 def td3_trial(trainer_kwargs: Dict[str, int],
                epsilon: float,
