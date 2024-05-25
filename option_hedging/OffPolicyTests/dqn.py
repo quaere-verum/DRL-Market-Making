@@ -1,5 +1,7 @@
 import gymnasium as gym
 from tianshou.data import Collector, VectorReplayBuffer
+from tianshou.data.batch import BatchProtocol
+from tianshou.data.types import ObsBatchProtocol, ModelOutputBatchProtocol
 from tianshou.env import SubprocVectorEnv, DummyVectorEnv
 from tianshou.policy import DQNPolicy
 from tianshou.trainer import OffpolicyTrainer
@@ -13,7 +15,7 @@ import os
 import shutil
 from pathlib import Path
 from option_hedging.gym_envs import make_env
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Literal, Any
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -36,6 +38,15 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
+def epsilon_greedy_scheduler(epsilon_greedy, policy, max_steps):
+    if epsilon_greedy is None:
+        return None
+
+    def train_fn(_, steps_taken):
+        policy.set_eps(max(epsilon_greedy['start']*(1-steps_taken/max_steps), epsilon_greedy['end']))
+    return train_fn
+
+
 def dqn_trial(trainer_kwargs: Dict[str, int],
               epsilon: float,
               sigma: float,
@@ -49,6 +60,7 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
               duration_bounds: Tuple[int, int],
               buffer_size: int,
               lr: float,
+              epsilon_greedy: Dict[str, float],
               subproc: bool = False,
               net_arch: Tuple[int] = (64, 32, 16, 4)
               ) -> OffpolicyTrainer:
@@ -95,7 +107,10 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
         clip_loss_grad=clip_loss_grad,
         observation_space=env.observation_space
     )
-
+    max_steps = trainer_kwargs['max_epoch']*trainer_kwargs['step_per_epoch']
+    train_fn = epsilon_greedy_scheduler(epsilon_greedy=epsilon_greedy,
+                                        policy=policy,
+                                        max_steps=max_steps)
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     return OffpolicyTrainer(
@@ -103,5 +118,6 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
                 train_collector=train_collector,
                 test_collector=test_collector,
                 logger=logger,
+                train_fn=train_fn,
                 **trainer_kwargs
             )

@@ -79,20 +79,22 @@ a2c_kwargs = {
 
 dqn_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'epsilon': 0.1,
+        'epsilon': 0.01,
         'sigma': 0.05,
         'rho': 0.2,
-        'discount_factor': 1.,
+        'discount_factor': 0.99,
         'estimation_step': 1,
-        'target_update_freq': 2,
+        'target_update_freq': 10000,
         'is_double': True,
         'clip_loss_grad': True,
         'action_bins': 25,
         'duration_bounds': (6, 12),
         'buffer_size': 2000,
-        'lr': 0.001,
+        'lr': 0.00025,
+        'epsilon_greedy': {'start': 1.,
+                           'end': 0.1},
         'subproc': False,
-        'net_arch': tuple(32 for k in range(10))
+        'net_arch': tuple(32 for _ in range(10))
 }
 
 options = {
