@@ -38,6 +38,7 @@ class PreprocessNet(nn.Module):
         obs = torch.as_tensor(obs, device=self.device)
         return self.model(obs), state
 
+
 class QNet(nn.Module):
     def __init__(self,
                  state_shape: Tuple[int],
