@@ -35,13 +35,11 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def a2c_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
+              policy_kwargs: Dict[str, Any],
               buffer_size: int,
               lr: float,
-              vf_coef: float = 0.5,
-              ent_coef: float = 0.01,
               subproc: bool = False,
               net_arch: Tuple[int] = (64, 32, 16, 4),
-              dist_std: float = 0.2
               ):
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:
@@ -52,24 +50,29 @@ def a2c_trial(trainer_kwargs: Dict[str, int],
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
     net = Net(state_shape=env.observation_space.shape, hidden_sizes=net_arch, device=device)
     if env_kwargs['action_bins'] == 0:
-        from tianshou.utils.net.discrete import Actor, Critic
+        from tianshou.utils.net.discrete import ActorProb, Critic
+        actor = ActorProb(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+
+        def dist_fn(mean, std):
+            return torch.distributions.Normal(mean, std)
     else:
         from tianshou.utils.net.discrete import Actor, Critic
-    actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+        actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+
+        def dist_fn(logits):
+            return torch.distributions.Categorical(logits)
     critic = Critic(preprocess_net=net, device=device).to(device)
     actor_critic = ActorCritic(actor, critic)
     optim = torch.optim.Adam(actor_critic.parameters(), lr=lr)
-
-    def dist_fn(mean):
-        return torch.distributions.Normal(mean, dist_std)
 
     policy = A2CPolicy(
         actor=actor,
         critic=critic,
         optim=optim,
-        dist_fn=dist_fn,
         action_space=env.action_space,
-        action_scaling=False
+        action_scaling=False,
+        dist_fn=dist_fn,
+        **policy_kwargs
     )
 
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))

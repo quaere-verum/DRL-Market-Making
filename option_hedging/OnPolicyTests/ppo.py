@@ -41,7 +41,6 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
               lr: float,
               subproc: bool = False,
               net_arch: Tuple[int] = (64, 32, 16, 4),
-              dist_std: float = 0.2
               ):
 
     env = gym.make('OptionHedgingEnv', epsilon=0)
@@ -54,15 +53,20 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
     net = Net(state_shape=env.observation_space.shape, hidden_sizes=net_arch, device=device)
     if env_kwargs['action_bins'] == 0:
         from tianshou.utils.net.discrete import Actor, Critic
+        actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+
+        def dist_fn(logits):
+            return torch.distributions.Categorical(logits)
     else:
-        from tianshou.utils.net.continuous import Actor, Critic
-    actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+        from tianshou.utils.net.continuous import ActorProb, Critic
+        actor = ActorProb(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+
+        def dist_fn(mean, std):
+            return torch.distributions.Normal(mean, std)
     critic = Critic(preprocess_net=net, device=device).to(device)
     actor_critic = ActorCritic(actor, critic)
     optim = torch.optim.Adam(actor_critic.parameters(), lr=lr)
 
-    def dist_fn(mean):
-        return torch.distributions.Normal(mean, dist_std)
     policy = PPOPolicy(
         actor=actor,
         critic=critic,

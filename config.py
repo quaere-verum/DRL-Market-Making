@@ -21,7 +21,7 @@ env_kwargs = {
         'epsilon': 0.,
         'sigma': 0.3,
         'rho': 0.2,
-        'action_bins': 20,
+        'action_bins': 0,
         'T': 1,
         'rebalance_frequency': 12
 }
@@ -32,13 +32,12 @@ ppo_kwargs = {
         'lr': 0.00025,
         'subproc': False,
         'net_arch': tuple(64 for k in range(6)),
-        'dist_std': 0.2,
         'policy_kwargs': {
                 'eps_clip': 0.2,
                 'dual_clip': None,
                 'value_clip': None,
                 'vf_coef': 0.7,
-                'ent_coef': 0.05,
+                'ent_coef': 0.005,
                 'max_grad_norm': 1,
                 'gae_lambda': 0.999,
                 'discount_factor': 0.99
@@ -53,7 +52,6 @@ sac_kwargs = {
         'lr': 0.00025,
         'subproc': False,
         'net_arch': (64, 32, 16, 4),
-        'dist_std': 0.2,
         'env_kwargs': env_kwargs
 }
 
@@ -76,7 +74,7 @@ a2c_kwargs = {
         'trainer_kwargs': trainer_kwargs,
         'policy_kwargs':{
                 'vf_coef': 0.5,
-                'ent_coef': 0.02,
+                'ent_coef': 0.005,
                 'max_grad_norm': 1.,
                 'gae_lambda': 0.999,
                 'discount_factor': 0.99
