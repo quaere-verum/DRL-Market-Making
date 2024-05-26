@@ -2,12 +2,12 @@ import numpy as np
 import gymnasium as gym
 from utils.history import History
 from utils.portfolio import SimplePortfolio
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Callable
 
 gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv')
 
 
-def make_reward_function(rho=0.):
+def make_reward_function(rho: float = 0.) -> Callable[[History], float]:
 
     def reward_function(info):
         stock_amount_delta = info['stock_held', -1] - info['stock_held', -2]
@@ -155,8 +155,8 @@ def make_env(epsilon: float,
              rebalance_frequency: int,
              seed: int | None,
              transaction_fees: float = 0.001,
-             **kwargs):
-    def _init():
+             **kwargs) -> Callable[[], OptionHedgingEnv]:
+    def _init() -> OptionHedgingEnv:
         env = gym.make('OptionHedgingEnv',
                        epsilon=epsilon,
                        sigma=sigma,

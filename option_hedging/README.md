@@ -22,8 +22,8 @@ Each of these choices has certain disadvantages. The first requires us to assume
 
 
 **Proof.** We have 
-$\mathbb{E}[\sum_{t=0} P_t-P_{t-1}]=\sum_{t=0}\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum_{t=1} \mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$, and the first summation in the second equation runs until $T-1$ (which is not rendered correctly in .md).
-We have used that $\mathbb{E}[P_0]=0$, assuming $S(0)\leq K$. If $S_0 > K$ then the expected sum of rewards is still the expected option value, up to an additive constant.
+$\mathbb{E}[\sum P_t-P_{t-1}]=\sum\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum \mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$ 
+where we have used that $\mathbb{E}[P_0]=0$, assuming $S(0)\leq K$. If $S_0 > K$ then the expected sum of rewards is still the expected option value, up to an additive constant.
 
 Therefore, we should be able to use both 1. and 2. to teach an agent how to hedge an option.
 # Experimental observations
@@ -71,6 +71,12 @@ ppo_kwargs = {
 }
 ```
 
+### 26/05/2024
+After experimenting with the DQN parameters, found a combination that seemingly results in a stable learning process. (Note: also changed the reward function so the actual numbers cannot be compared to the ones above).
 
+
+![Mean Reward](./Figures/mean_reward.png)
+
+![Std Reward](./Figures/std_reward.png)
 
 

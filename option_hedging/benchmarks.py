@@ -36,8 +36,8 @@ if __name__ == '__main__':
                    sigma=0.2,
                    rho=0.,
                    action_bins=0,
-                   T=1,
-                   rebalance_frequency=100,
+                   T=2,
+                   rebalance_frequency=200,
                    seed=123,
                    transaction_fees=0.)()
     print(black_scholes_benchmark(env, 100))

@@ -11,14 +11,14 @@ def main() -> None:
     assert benchmark.lower() in ('y', 'n')
     if benchmark.lower() == 'y':
         from option_hedging.benchmarks import black_scholes_benchmark
-        env = make_env(seed=123, **kwargs)()
+        env = make_env(seed=123, **kwargs['env_kwargs'])()
         mean, std = black_scholes_benchmark(env, n_trials=1000)
         print(f'Black-Scholes benchmark: {mean} +/- {std}\n')
     random_benchmark = input(f'Benchmark against random agent? y/n\n')
     assert random_benchmark.lower() in ('y', 'n')
     if random_benchmark.lower() == 'y':
         from option_hedging.benchmarks import random_agent_benchmark
-        env = make_env(seed=123, **kwargs)()
+        env = make_env(seed=123, **kwargs['env_kwargs'])()
         mean, std = random_agent_benchmark(env, n_trials=1000)
         print(f'Random agent benchmark: {mean} +/- {std}\n')
     trainer = selection['trainer'](**kwargs)

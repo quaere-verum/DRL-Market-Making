@@ -6,32 +6,32 @@ from option_hedging.OffPolicyTests.sac import sac_trial
 from option_hedging.OffPolicyTests.td3 import td3_trial
 
 trainer_kwargs = {
-        'max_epoch': 1000,
+        'max_epoch': 100,
         'batch_size': 512,
-        'step_per_epoch': 100,
+        'step_per_epoch': 10000,
         'repeat_per_collect': 5,
         'episode_per_test': 1000,
-        'update_per_step': 1.,
-        'step_per_collect': 100,
+        'update_per_step': 2.,
+        'step_per_collect': 2000,
         'verbose': True,
         'show_progress': True
 }
 
 env_kwargs = {
-        'epsilon': 0.1,
-        'sigma': 0.05,
+        'epsilon': 0.,
+        'sigma': 0.3,
         'rho': 0.2,
-        'action_bins': 32,
+        'action_bins': 20,
         'T': 1,
-        'rebalance_frequency': 10
+        'rebalance_frequency': 12
 }
 
 ppo_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'buffer_size': 6000,
+        'buffer_size': 4000,
         'lr': 0.001,
         'subproc': False,
-        'net_arch': tuple(32 for k in range(10)),
+        'net_arch': tuple(256 for k in range(4)),
         'dist_std': 0.1,
         'env_kwargs': env_kwargs
 }
@@ -49,12 +49,11 @@ sac_kwargs = {
 
 ddpg_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'rho': 0.2,
         'tau': 0.05,
-        'buffer_size': 2000,
-        'lr': 0.001,
+        'buffer_size': 4000,
+        'lr': 0.00025,
         'subproc': False,
-        'net_arch': (64, 32, 16, 4),
+        'net_arch': (32, 64, 64, 64, 32, 16),
         'env_kwargs': env_kwargs
 }
 
@@ -79,12 +78,12 @@ dqn_kwargs = {
         'target_update_freq': 10000,
         'is_double': True,
         'clip_loss_grad': True,
-        'buffer_size': 2000,
+        'buffer_size': 10000,
         'lr': 0.00025,
         'epsilon_greedy': {'start': 1.,
                            'end': 0.1},
         'subproc': False,
-        'net_arch': tuple(32 for _ in range(10)),
+        'net_arch': tuple(64 for _ in range(6)),
         'env_kwargs': env_kwargs
 }
 
