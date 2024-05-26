@@ -12,13 +12,13 @@ The state space is given by the parameters which are used in the Black-Scholes m
 ## Designing the reward function
 Let $P_t$ denote the value of our portfolio at time $t$. This consists of the stock, and the option. Let we let our reward at time $t$ be $P_t-P_{t-1}-c_t-\rho(P_t-P_{t-1})^2$, where $\rho$ is a hyperparameter that determines how much we punish variance in the portfolio value.
 ### Note
-Determining the value $P_t$ cannot be done umambiguously, since we hold a short position in the option, which is part of the portfolio. Therefore, we have the following three choices:
+Determining the value $P_t$ cannot be done unambiguously, since we hold a short position in the option, which is part of the portfolio. Therefore, we have the following three choices:
 1. Use an option pricing model to evaluate the option's value at each point in time
 2. Consider the value of the option at each time to be the value it would have if it was exercised at that point in time
 3. Consider the value of the option to be $0$ until the expiry date, at which point its value is the payout value
 
 Each of these choices has certain disadvantages. The first requires us to assume an option pricing model, the second valuates the option in a way that is clearly incorrect, and the third would distribute the rewards per step very unevenly making it difficult for the DRL agent to learn the right policy. We will therefore discard the third choice as it would presumably lead to instability. The second choice does have the advantage that it distributes rewards more evenly, and the sum of the reward component coming from the option will add up to the payoff at expiry.
-> **Lemma**. Let $P_t=\max(S_t-K, 0)$. If $S(0)\leq K$ then $\mathbb{E}[\sum P_t-P_{t-1}]=\mathbb{E}[C(T)]$ where $C(T)$ is the option value. If $S_0 < K$, the same holds up to an additive constant of $\max(S_0-K,0)$ 
+> **Lemma**. Let $P_t=\max(S_t-K, 0)$. If $S(0)\leq K$ then $\mathbb{E}[\sum P_t-P_{t-1}]=\mathbb{E}[C(T)]$ where $C(T)$ is the option value. If $S_0 > K$, the same holds up to an additive constant of $\max(S_0-K,0)$ 
 
 
 **Proof.** We have 
