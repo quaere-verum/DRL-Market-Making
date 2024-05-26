@@ -21,7 +21,7 @@ env_kwargs = {
         'epsilon': 0.,
         'sigma': 0.3,
         'rho': 0.2,
-        'action_bins': 0,
+        'action_bins': 20,
         'T': 1,
         'rebalance_frequency': 12
 }
@@ -47,7 +47,9 @@ ppo_kwargs = {
 
 sac_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'tau': 0.05,
+        'policy_kwargs': {
+                'tau': 0.01
+        },
         'buffer_size': 2000,
         'lr': 0.00025,
         'subproc': False,
@@ -59,7 +61,7 @@ ddpg_kwargs = {
         'trainer_kwargs': trainer_kwargs,
         'policy_kwargs': {
                 'exploration_noise': 'default',
-                'tau': 0.05
+                'tau': 0.01
         },
         'buffer_size': 5000,
         'lr': 0.00025,

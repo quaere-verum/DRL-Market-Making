@@ -3,7 +3,7 @@ from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import SubprocVectorEnv, DummyVectorEnv
 from tianshou.policy import DQNPolicy
 from tianshou.trainer import OffpolicyTrainer
-from tianshou.utils.net.common import Net
+from utils.torch_modules import QNet
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 from option_hedging.gym_envs import make_env
 from typing import Dict, Tuple, Any
+
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -52,7 +53,10 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
               subproc: bool = False,
               net_arch: Tuple[int] = (64, 32, 16, 4)
               ) -> OffpolicyTrainer:
-
+    if env_kwargs['action_bins'] == 0:
+        new_bins = int(input('DQN requires discrete action space. Set new action_bins:\n'))
+        assert new_bins > 0
+        env_kwargs['action_bins'] = new_bins
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:
         train_envs = SubprocVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
@@ -60,8 +64,7 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
     else:
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
-    net = Net(state_shape=env.observation_space.shape,
-              hidden_sizes=net_arch, concat=True, device=device).to(device)
+    net = QNet(state_shape=env.observation_space.shape, linear_dims=net_arch, device=device)
     optim = torch.optim.Adam(net.parameters(), lr=lr)
 
     policy = DQNPolicy(

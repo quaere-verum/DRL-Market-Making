@@ -3,7 +3,8 @@ from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import SubprocVectorEnv, DummyVectorEnv
 from tianshou.policy import A2CPolicy
 from tianshou.trainer import OnpolicyTrainer
-from tianshou.utils.net.common import ActorCritic, Net
+from tianshou.utils.net.common import ActorCritic
+from utils.torch_modules import PreprocessNet
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -48,16 +49,16 @@ def a2c_trial(trainer_kwargs: Dict[str, int],
     else:
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
-    net = Net(state_shape=env.observation_space.shape, hidden_sizes=net_arch, device=device)
+    net = PreprocessNet(state_shape=env.observation_space.shape, linear_dims=net_arch, device=device)
     if env_kwargs['action_bins'] == 0:
-        from tianshou.utils.net.discrete import ActorProb, Critic
-        actor = ActorProb(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+        from tianshou.utils.net.discrete import Actor, Critic
+        actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
 
         def dist_fn(mean, std):
             return torch.distributions.Normal(mean, std)
     else:
-        from tianshou.utils.net.discrete import Actor, Critic
-        actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+        from tianshou.utils.net.discrete import ActorProb, Critic
+        actor = ActorProb(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
 
         def dist_fn(logits):
             return torch.distributions.Categorical(logits)

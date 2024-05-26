@@ -3,7 +3,7 @@ from tianshou.data import Collector, VectorReplayBuffer
 from tianshou.env import SubprocVectorEnv, DummyVectorEnv
 from tianshou.policy import SACPolicy
 from tianshou.trainer import OffpolicyTrainer
-from tianshou.utils.net.common import Net
+from utils.torch_modules import PreprocessNet
 from tianshou.utils.net.continuous import ActorProb, Critic
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
@@ -51,13 +51,13 @@ def sac_trial(trainer_kwargs: Dict[str, int],
     else:
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
-    actor_net = Net(state_shape=env.observation_space.shape,
-                    hidden_sizes=net_arch, device=device)
+    actor_net = PreprocessNet(state_shape=env.observation_space.shape,
+                              linear_dims=net_arch, device=device)
     critic_state_shape = (env.observation_space.shape[0] + 1,)
-    critic_net = Net(state_shape=critic_state_shape,
-                     hidden_sizes=net_arch, concat=True, device=device)
-    critic2_net = Net(state_shape=critic_state_shape,
-                      hidden_sizes=net_arch, concat=True, device=device)
+    critic_net = PreprocessNet(state_shape=critic_state_shape,
+                               linear_dims=net_arch, device=device)
+    critic2_net = PreprocessNet(state_shape=critic_state_shape,
+                                linear_dims=net_arch, device=device)
     actor = ActorProb(preprocess_net=actor_net, action_shape=env.action_space.shape, device=device).to(device)
     critic = Critic(preprocess_net=critic_net, device=device).to(device)
     critic2 = Critic(preprocess_net=critic2_net, device=device).to(device)
