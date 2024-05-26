@@ -37,7 +37,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def sac_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
-              tau: float,
+              policy_kwargs: Dict[str, Any],
               buffer_size: int,
               lr: float,
               subproc: bool = False,
@@ -74,8 +74,7 @@ def sac_trial(trainer_kwargs: Dict[str, int],
         critic2_optim=critic2_optim,
         action_space=env.action_space,
         action_scaling=False,
-        tau=tau,
-        exploration_noise='default'
+        **policy_kwargs
     )
 
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))

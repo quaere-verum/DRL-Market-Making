@@ -45,11 +45,7 @@ def epsilon_greedy_scheduler(epsilon_greedy, policy, max_steps):
 
 def dqn_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
-              discount_factor: float,
-              estimation_step: int,
-              target_update_freq: int,
-              is_double: bool,
-              clip_loss_grad: bool,
+              policy_kwargs: Dict[str, Any],
               buffer_size: int,
               lr: float,
               epsilon_greedy: Dict[str, float],
@@ -72,12 +68,8 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
         model=net,
         optim=optim,
         action_space=env.action_space,
-        discount_factor=discount_factor,
-        estimation_step=estimation_step,
-        target_update_freq=target_update_freq,
-        is_double=is_double,
-        clip_loss_grad=clip_loss_grad,
-        observation_space=env.observation_space
+        observation_space=env.observation_space,
+        **policy_kwargs
     )
     max_steps = trainer_kwargs['max_epoch']*trainer_kwargs['step_per_epoch']
     train_fn = epsilon_greedy_scheduler(epsilon_greedy=epsilon_greedy,

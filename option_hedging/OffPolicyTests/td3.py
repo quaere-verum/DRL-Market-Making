@@ -15,6 +15,7 @@ import shutil
 from pathlib import Path
 from option_hedging.gym_envs import make_env
 from typing import Dict, Tuple, Any
+import warnings
 
 log_dir = os.path.join(Path(os.path.abspath(__file__)).parent.parent.parent.absolute(), '.logs')
 if os.path.exists(log_dir):
@@ -37,13 +38,15 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def td3_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
-              tau: float,
+              policy_kwargs: Dict[str, Any],
               buffer_size: int,
               lr: float,
               subproc: bool = False,
               net_arch: Tuple[int] = (64, 32, 16, 4)
               ) -> OffpolicyTrainer:
-
+    if env_kwargs['action_bins'] > 0:
+        warnings.warn('TD3 requires a continuous action space. Setting action_bins to 0.', UserWarning)
+        env_kwargs['action_bins'] = 0
     env = gym.make('OptionHedgingEnv', epsilon=0)
     if subproc:
         train_envs = SubprocVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
@@ -74,8 +77,7 @@ def td3_trial(trainer_kwargs: Dict[str, int],
         critic2_optim=critic2_optim,
         action_space=env.action_space,
         action_scaling=False,
-        tau=tau,
-        exploration_noise='default'
+        **policy_kwargs
     )
 
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))

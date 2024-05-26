@@ -28,11 +28,21 @@ env_kwargs = {
 
 ppo_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'buffer_size': 4000,
-        'lr': 0.001,
+        'buffer_size': 5000,
+        'lr': 0.00025,
         'subproc': False,
-        'net_arch': tuple(256 for k in range(4)),
-        'dist_std': 0.1,
+        'net_arch': tuple(64 for k in range(6)),
+        'dist_std': 0.2,
+        'policy_kwargs': {
+                'eps_clip': 0.2,
+                'dual_clip': None,
+                'value_clip': None,
+                'vf_coef': 0.7,
+                'ent_coef': 0.05,
+                'max_grad_norm': 1,
+                'gae_lambda': 0.999,
+                'discount_factor': 0.99
+        },
         'env_kwargs': env_kwargs
 }
 
@@ -40,7 +50,7 @@ sac_kwargs = {
         'trainer_kwargs': trainer_kwargs,
         'tau': 0.05,
         'buffer_size': 2000,
-        'lr': 0.001,
+        'lr': 0.00025,
         'subproc': False,
         'net_arch': (64, 32, 16, 4),
         'dist_std': 0.2,
@@ -49,11 +59,14 @@ sac_kwargs = {
 
 ddpg_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'tau': 0.05,
-        'buffer_size': 4000,
+        'policy_kwargs': {
+                'exploration_noise': 'default',
+                'tau': 0.05
+        },
+        'buffer_size': 5000,
         'lr': 0.00025,
         'subproc': False,
-        'net_arch': (32, 64, 64, 64, 32, 16),
+        'net_arch': tuple(64 for _ in range(6)),
         'env_kwargs': env_kwargs
 }
 
@@ -61,23 +74,30 @@ td3_kwargs = ddpg_kwargs.copy()
 
 a2c_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'rho': 0.2,
-        'vf_coef': 0.5,
-        'ent_coef': 0.02,
+        'policy_kwargs':{
+                'vf_coef': 0.5,
+                'ent_coef': 0.02,
+                'max_grad_norm': 1.,
+                'gae_lambda': 0.999,
+                'discount_factor': 0.99
+        },
         'buffer_size': 2000,
         'lr': 0.001,
         'subproc': False,
-        'net_arch': (64, 32, 16, 4),
+        'net_arch': tuple(64 for _ in range(6)),
         'env_kwargs': env_kwargs
 }
 
 dqn_kwargs = {
         'trainer_kwargs': trainer_kwargs,
-        'discount_factor': 0.99,
-        'estimation_step': 1,
-        'target_update_freq': 10000,
-        'is_double': True,
-        'clip_loss_grad': True,
+        'policy_kwargs': {
+                'discount_factor': 0.99,
+                'estimation_step': 1,
+                'target_update_freq': 10000,
+                'is_double': True,
+                'clip_loss_grad': True
+        },
+
         'buffer_size': 10000,
         'lr': 0.00025,
         'epsilon_greedy': {'start': 1.,

@@ -4,7 +4,6 @@ from tianshou.env import SubprocVectorEnv, DummyVectorEnv
 from tianshou.policy import PPOPolicy
 from tianshou.trainer import OnpolicyTrainer
 from tianshou.utils.net.common import ActorCritic, Net
-from tianshou.utils.net.continuous import Actor, Critic
 from tianshou.utils import TensorboardLogger
 from torch.utils.tensorboard import SummaryWriter
 import torch
@@ -37,6 +36,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def ppo_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
+              policy_kwargs: Dict[str, Any],
               buffer_size: int,
               lr: float,
               subproc: bool = False,
@@ -52,6 +52,10 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
     net = Net(state_shape=env.observation_space.shape, hidden_sizes=net_arch, device=device)
+    if env_kwargs['action_bins'] == 0:
+        from tianshou.utils.net.discrete import Actor, Critic
+    else:
+        from tianshou.utils.net.continuous import Actor, Critic
     actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
     critic = Critic(preprocess_net=net, device=device).to(device)
     actor_critic = ActorCritic(actor, critic)
@@ -65,7 +69,8 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
         optim=optim,
         dist_fn=dist_fn,
         action_space=env.action_space,
-        action_scaling=False
+        action_scaling=False,
+        **policy_kwargs
     )
 
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))
