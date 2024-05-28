@@ -10,12 +10,10 @@ gym.envs.register('OptionHedgingEnv', 'option_hedging.gym_envs:OptionHedgingEnv'
 def make_reward_function(rho: float = 0.) -> Callable[[History], float]:
 
     def reward_function(info):
-        stock_amount_delta = info['stock_held', -1] - info['stock_held', -2]
-        option_delta = info['option_valuation', -1] - info['option_valuation', -2]
-        transaction_cost = info['transaction_fees', 0] * info['stock_price', - 1] * np.abs(stock_amount_delta)
-        stock_delta = info['stock_held', -2] * (info['stock_price', -1] - info['stock_price', -2])
-        portfolio_delta = stock_delta - option_delta
-        return portfolio_delta - transaction_cost - rho / 2 * portfolio_delta ** 2
+        portfolio_delta = info['portfolio_value', -1] - info['portfolio_value', -2]
+        transaction_costs = info['transaction_fees', -1] * np.abs((info['stock_held', -1] -
+                                                                   info['stock_held', -2]) * info['stock_price', -1])
+        return portfolio_delta - transaction_costs - rho / 2 * portfolio_delta ** 2
 
     return reward_function
 
@@ -92,11 +90,9 @@ class OptionHedgingEnv(gym.Env):
             self.seed()
         strike_price = 100
         self.portfolio = SimplePortfolio(strike_price=strike_price,
-                                         stock_price=100.,
                                          expiry_time=self.T,
-                                         dt=self.dt,
-                                         transaction_fees=self.transaction_fees)
-
+                                         dt=self.dt)
+        self.portfolio.init(self.sigma, 0.5)
         self.info = History(max_size=self.T*int(1/self.dt))
 
         state = {
@@ -104,20 +100,26 @@ class OptionHedgingEnv(gym.Env):
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
             'strike_price': self.portfolio.strike_price,
-            'option_valuation': self.portfolio.option_valuation(self.sigma)
+            'option_value': self.portfolio.option_valuation(self.sigma)
         }
         self.info.set(
             transaction_fees=self.transaction_fees,
             reward=0,
             sigma=self.sigma,
-            **state
+            portfolio_value=self.portfolio.portfolio_valuation(self.sigma),
+            stock_held=self.portfolio.stock_held,
+            stock_price=self.portfolio.stock_price,
+            capital=self.portfolio.capital,
+            option_value=state['option_value'],
+            action=None
         )
         return np.array(list(state.values()), dtype=np.float32), self.info[-1]
 
     def step(self, action: np.ndarray = None) -> Tuple[np.ndarray, float, bool, bool, History]:
         action = self._process_action(action)
         done, truncated = False, False
-        new_price = self.portfolio.stock_price * np.exp(self.rng.normal(0, self.sigma*np.sqrt(self.dt)))
+        price_change = np.exp(self.rng.normal(0, self.sigma*np.sqrt(self.dt)))
+        new_price = self.portfolio.stock_price * price_change
         self.portfolio.update_position(new_price, action)
 
         state = {
@@ -125,22 +127,25 @@ class OptionHedgingEnv(gym.Env):
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
             'strike_price': self.portfolio.strike_price,
-            'option_valuation': self.portfolio.option_valuation(self.sigma)
+            'option_value': self.portfolio.option_valuation(self.sigma)
         }
         self.info.add(
             transaction_fees=self.transaction_fees,
             reward=0,
             sigma=self.sigma,
-            **state
+            portfolio_value=self.portfolio.portfolio_valuation(self.sigma),
+            stock_held=self.portfolio.stock_held,
+            stock_price=self.portfolio.stock_price,
+            capital=self.portfolio.capital,
+            option_value=state['option_value'],
+            action=action
         )
         reward = self.reward_function(self.info)
-
         if np.isclose(self.portfolio.remaining_time, self.dt):
             reward -= self.portfolio.stock_held * new_price * self.transaction_fees
             done = True
 
         self.info['reward', -1] = reward
-
         return np.array(list(state.values()), dtype=np.float32), reward, done, truncated, self.info[-1]
 
     def render(self) -> None:
