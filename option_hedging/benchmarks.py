@@ -10,7 +10,10 @@ def black_scholes_benchmark(env: OptionHedgingEnv, n_trials: int) -> Tuple[float
         total_reward = 0
         done, truncated = False, False
         while not done and not truncated:
-            action = np.array([env.portfolio.black_scholes_hedge(env.sigma)])
+            hedge = env.portfolio.black_scholes_hedge(env.sigma)
+            if env.action_bins > 0:
+                hedge = int((1+env.epsilon)*env.action_bins*hedge)
+            action = np.array([hedge])
             _, reward, done, truncated, _ = env.step(action)
             total_reward += reward
         rewards[trial] = total_reward
@@ -33,11 +36,11 @@ def random_agent_benchmark(env: OptionHedgingEnv, n_trials: int) -> Tuple[float,
 
 if __name__ == '__main__':
     env = make_env(epsilon=0.01,
-                   sigma=0.2,
+                   sigma=0.3,
                    rho=0.,
-                   action_bins=0,
+                   action_bins=20,
                    T=2,
-                   rebalance_frequency=200,
+                   rebalance_frequency=20,
                    seed=123,
                    transaction_fees=0.)()
     print(black_scholes_benchmark(env, 100))

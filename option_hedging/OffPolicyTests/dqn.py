@@ -35,23 +35,23 @@ torch.backends.cudnn.benchmark = False
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-def epsilon_greedy_scheduler(epsilon_greedy, policy, max_steps):
+def epsilon_greedy_scheduler(epsilon_greedy, policy):
     if epsilon_greedy is None:
         return None
 
     def train_fn(_, steps_taken):
-        policy.set_eps(max(epsilon_greedy['start']*(1-steps_taken/max_steps), epsilon_greedy['end']))
+        policy.set_eps(max(epsilon_greedy['start']*(1-steps_taken/epsilon_greedy['max_steps']), epsilon_greedy['end']))
     return train_fn
 
 
 def dqn_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
               policy_kwargs: Dict[str, Any],
+              net_kwargs: Dict[str, Tuple[int]],
               buffer_size: int,
               lr: float,
               epsilon_greedy: Dict[str, float],
               subproc: bool = False,
-              net_arch: Tuple[int] = (64, 32, 16, 4)
               ) -> OffpolicyTrainer:
     if env_kwargs['action_bins'] == 0:
         new_bins = int(input('DQN requires discrete action space. Set new action_bins:\n'))
@@ -64,7 +64,10 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
     else:
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
-    net = QNet(state_shape=env.observation_space.shape, linear_dims=net_arch, device=device)
+    net = QNet(state_shape=env.observation_space.shape,
+               action_shape=env.action_space.shape,
+               device=device,
+               **net_kwargs)
     optim = torch.optim.Adam(net.parameters(), lr=lr)
 
     policy = DQNPolicy(
@@ -74,10 +77,8 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
         observation_space=env.observation_space,
         **policy_kwargs
     )
-    max_steps = trainer_kwargs['max_epoch']*trainer_kwargs['step_per_epoch']
     train_fn = epsilon_greedy_scheduler(epsilon_greedy=epsilon_greedy,
-                                        policy=policy,
-                                        max_steps=max_steps)
+                                        policy=policy)
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))
     test_collector = Collector(policy, test_envs)
     return OffpolicyTrainer(

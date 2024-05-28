@@ -39,10 +39,10 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 def td3_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
               policy_kwargs: Dict[str, Any],
+              net_kwargs: Dict[str, Tuple[int]],
               buffer_size: int,
               lr: float,
-              subproc: bool = False,
-              net_arch: Tuple[int] = (64, 32, 16, 4)
+              subproc: bool = False
               ) -> OffpolicyTrainer:
     if env_kwargs['action_bins'] > 0:
         warnings.warn('TD3 requires a continuous action space. Setting action_bins to 0.', UserWarning)
@@ -54,13 +54,10 @@ def td3_trial(trainer_kwargs: Dict[str, int],
     else:
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
-    actor_net = PreprocessNet(state_shape=env.observation_space.shape,
-                              linear_dims=net_arch, device=device)
+    actor_net = PreprocessNet(state_shape=env.observation_space.shape, device=device, **net_kwargs)
     critic_state_shape = (env.observation_space.shape[0] + 1,)
-    critic_net = PreprocessNet(state_shape=critic_state_shape,
-                               linear_dims=net_arch, device=device)
-    critic2_net = PreprocessNet(state_shape=critic_state_shape,
-                                linear_dims=net_arch, device=device)
+    critic_net = PreprocessNet(state_shape=critic_state_shape, device=device, **net_kwargs)
+    critic2_net = PreprocessNet(state_shape=critic_state_shape, device=device, **net_kwargs)
     actor = Actor(preprocess_net=actor_net, action_shape=env.action_space.shape, device=device).to(device)
     critic = Critic(preprocess_net=critic_net, device=device).to(device)
     critic2 = Critic(preprocess_net=critic2_net, device=device).to(device)

@@ -38,10 +38,10 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 def ppo_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
               policy_kwargs: Dict[str, Any],
+              net_kwargs: Dict[str, Tuple[int]],
               buffer_size: int,
               lr: float,
-              subproc: bool = False,
-              net_arch: Tuple[int] = (64, 32, 16, 4),
+              subproc: bool = False
               ):
 
     env = gym.make('OptionHedgingEnv', epsilon=0)
@@ -51,7 +51,7 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
     else:
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
-    net = PreprocessNet(state_shape=env.observation_space.shape, linear_dims=net_arch, device=device)
+    net = PreprocessNet(state_shape=env.observation_space.shape, device=device, **net_kwargs)
     if env_kwargs['action_bins'] == 0:
         from tianshou.utils.net.discrete import Actor, Critic
         actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
