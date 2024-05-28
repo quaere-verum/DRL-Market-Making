@@ -20,6 +20,7 @@ Determining the value $P_t$ cannot be done unambiguously, since we hold a short 
 Each of these choices has certain disadvantages. The first requires us to assume an option pricing model, the second valuates the option in a way that is clearly incorrect, and the third would distribute the rewards per step very unevenly making it difficult for the DRL agent to learn the right policy. We will therefore discard the third choice as it would presumably lead to instability. The second choice does have the advantage that it distributes rewards more evenly, and the sum of the reward component coming from the option will add up to the payoff at expiry.
 > **Lemma**. Let $P_t=\max(S_t-K, 0)$. If $S(0)\leq K$ then $\mathbb{E}[\sum P_t-P_{t-1}]=\mathbb{E}[C(T)]$ where $C(T)$ is the option value. If $S_0 > K$, the same holds up to an additive constant of $\max(S_0-K,0)$ 
 
+Note: summation bounds are omitted due to formatting issues. First summation is from 1 to T, the second and third from 1 to T-1.
 
 **Proof.** We have 
 $\mathbb{E}[\sum P_t-P_{t-1}]=\sum\mathbb{E}[P_t] + \mathbb{E}[P_T]-\mathbb{E}[P_0]-\sum \mathbb{E}[P_t] = \mathbb{E}[P_T]=\mathbb{E}[C(T)]$ 
