@@ -43,5 +43,5 @@ if __name__ == '__main__':
                    rebalance_frequency=24,
                    seed=123,
                    transaction_fees=0.001)()
-    print(black_scholes_benchmark(env, 1000))
-    print(random_agent_benchmark(env, 1000))
+    print(black_scholes_benchmark(env, 100))
+    print(random_agent_benchmark(env, 100))

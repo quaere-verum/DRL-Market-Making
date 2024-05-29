@@ -44,7 +44,7 @@ def sac_trial(trainer_kwargs: Dict[str, int],
               subproc: bool = False
               ):
 
-    env = gym.make('OptionHedgingEnv', epsilon=0)
+    env = gym.make('OptionHedgingEnv', epsilon=0, action_bins=env_kwargs['action_bins'])
     if subproc:
         train_envs = SubprocVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = SubprocVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
@@ -75,6 +75,7 @@ def sac_trial(trainer_kwargs: Dict[str, int],
     )
 
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))
+    train_collector.collect(buffer_size, random=True)
     test_collector = Collector(policy, test_envs)
     return OffpolicyTrainer(
                 policy=policy,

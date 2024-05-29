@@ -48,6 +48,7 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
               policy_kwargs: Dict[str, Any],
               net_kwargs: Dict[str, Tuple[int]],
+              lr_scheduler_kwargs: Dict[str, Any] | None,
               buffer_size: int,
               lr: float,
               epsilon_greedy: Dict[str, float],
@@ -57,7 +58,7 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
         new_bins = int(input('DQN requires discrete action space. Set new action_bins:\n'))
         assert new_bins > 0
         env_kwargs['action_bins'] = new_bins
-    env = gym.make('OptionHedgingEnv', epsilon=0)
+    env = gym.make('OptionHedgingEnv', epsilon=0, action_bins=env_kwargs['action_bins'])
     if subproc:
         train_envs = SubprocVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = SubprocVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
@@ -65,21 +66,29 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
     net = QNet(state_shape=env.observation_space.shape,
-               action_shape=env.action_space.shape,
+               action_shape=env.action_space.n,
                device=device,
                **net_kwargs)
     optim = torch.optim.Adam(net.parameters(), lr=lr)
+    if lr_scheduler_kwargs is not None:
+        lr_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer=optim,
+                                                         start_factor=1,
+                                                         **lr_scheduler_kwargs)
+    else:
+        lr_scheduler = None
 
     policy = DQNPolicy(
         model=net,
         optim=optim,
         action_space=env.action_space,
         observation_space=env.observation_space,
+        lr_scheduler=lr_scheduler,
         **policy_kwargs
     )
     train_fn = epsilon_greedy_scheduler(epsilon_greedy=epsilon_greedy,
                                         policy=policy)
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))
+    train_collector.collect(buffer_size, random=True)
     test_collector = Collector(policy, test_envs)
     return OffpolicyTrainer(
                 policy=policy,

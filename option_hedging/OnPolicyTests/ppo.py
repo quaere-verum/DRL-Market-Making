@@ -44,7 +44,7 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
               subproc: bool = False
               ):
 
-    env = gym.make('OptionHedgingEnv', epsilon=0)
+    env = gym.make('OptionHedgingEnv', epsilon=0, action_bins=env_kwargs['action_bins'])
     if subproc:
         train_envs = SubprocVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = SubprocVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
@@ -52,9 +52,9 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
         train_envs = DummyVectorEnv([make_env(seed=k, **env_kwargs) for k in range(20)])
         test_envs = DummyVectorEnv([make_env(seed=k * 50, **env_kwargs) for k in range(10)])
     net = PreprocessNet(state_shape=env.observation_space.shape, device=device, **net_kwargs)
-    if env_kwargs['action_bins'] == 0:
+    if env_kwargs['action_bins'] != 0:
         from tianshou.utils.net.discrete import Actor, Critic
-        actor = Actor(preprocess_net=net, action_shape=env.action_space.shape, device=device).to(device)
+        actor = Actor(preprocess_net=net, action_shape=env.action_space.n, device=device).to(device)
 
         def dist_fn(logits):
             return torch.distributions.Categorical(logits)
