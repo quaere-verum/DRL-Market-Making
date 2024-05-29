@@ -8,11 +8,11 @@ from option_hedging.OffPolicyTests.td3 import td3_trial
 trainer_kwargs = {
         'max_epoch': 20,
         'batch_size': 512,
-        'step_per_epoch': 10_000,
+        'step_per_epoch': 20_000,
         'episode_per_test': 1_000,
         'update_per_step': 5,  # Off-policy
         'repeat_per_collect': 5,  # On-policy
-        'step_per_collect': 2_000,
+        'step_per_collect': 5_000,
         'verbose': True,
         'show_progress': True
 }
@@ -24,16 +24,16 @@ lr_scheduler_kwargs = {
 
 env_kwargs = {
         'epsilon': 0.,
-        'sigma': 0.15,
+        'sigma': 0.1,
         'rho': 0.01,
         'action_bins': 30,
-        'T': 2,
-        'rebalance_frequency': 24
+        'T': 1,
+        'rebalance_frequency': 12
 }
 
 net_kwargs = {
-        'linear_dims': tuple(256 for _ in range(2)),
-        'residual_dims': tuple(64 for _ in range(1)),
+        'linear_dims': tuple(256 for _ in range(3)),
+        'residual_dims': None,
         'activation_fn': 'relu',
         'norm_layer': False
 }
@@ -104,17 +104,17 @@ dqn_kwargs = {
         'trainer_kwargs': trainer_kwargs,
         'policy_kwargs': {
                 'discount_factor': 0.99,
-                'estimation_step': 2,
-                'target_update_freq': 10000,
+                'estimation_step': 1,
+                'target_update_freq': 10_000,
                 'is_double': True,
                 'clip_loss_grad': True
         },
         'lr_scheduler_kwargs': lr_scheduler_kwargs,
         'lr': 0.01,
-        'buffer_size': 30000,
+        'buffer_size': 100_000,
         'epsilon_greedy': {'start': 1.,
                            'end': 0.1,
-                           'max_steps': int(1e5)},
+                           'max_steps': 100_000},
         'subproc': True,
         'net_kwargs': net_kwargs,
         'env_kwargs': env_kwargs

@@ -14,7 +14,8 @@ class SimplePortfolio:
         self.stock_held = None
         self.capital = None
 
-    def init(self, sigma, initial_stock_held):
+    def init(self, sigma):
+        initial_stock_held = self.black_scholes_hedge(sigma)
         self.capital = self.option_valuation(sigma) - initial_stock_held*self.stock_price
         self.stock_held = initial_stock_held
 

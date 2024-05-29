@@ -56,11 +56,11 @@ class OptionHedgingEnv(gym.Env):
             self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
         else:
             self.action_space = gym.spaces.Discrete(action_bins)
-        # stock price, remaining time, stock held, strike price, option_valuation
-        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0]).astype(np.float32),
+        # stock price, remaining time, stock held, strike price, option_valuation, black_scholes_hedge
+        self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
                                                 high=np.array([1e3, T+1,
-                                                               1 + epsilon, 1e3, 1e3]).astype(np.float32),
-                                                shape=(5,))
+                                                               1 + epsilon, 1e3, 1e3, 1 + 1e-3]).astype(np.float32),
+                                                shape=(6,))
 
         self.sigma = sigma
         self.portfolio = None
@@ -92,7 +92,7 @@ class OptionHedgingEnv(gym.Env):
         self.portfolio = SimplePortfolio(strike_price=strike_price,
                                          expiry_time=self.T,
                                          dt=self.dt)
-        self.portfolio.init(self.sigma, 0.5)
+        self.portfolio.init(self.sigma)
         self.info = History(max_size=self.T*int(1/self.dt))
 
         state = {
@@ -100,7 +100,8 @@ class OptionHedgingEnv(gym.Env):
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
             'strike_price': self.portfolio.strike_price,
-            'option_value': self.portfolio.option_valuation(self.sigma)
+            'option_value': self.portfolio.option_valuation(self.sigma),
+            'black_scholes_hedge': self.portfolio.stock_held
         }
         self.info.set(
             transaction_fees=self.transaction_fees,
@@ -127,7 +128,8 @@ class OptionHedgingEnv(gym.Env):
             'remaining_time': self.portfolio.remaining_time,
             'stock_held': self.portfolio.stock_held,
             'strike_price': self.portfolio.strike_price,
-            'option_value': self.portfolio.option_valuation(self.sigma)
+            'option_value': self.portfolio.option_valuation(self.sigma),
+            'black_scholes_hedge': self.portfolio.black_scholes_hedge(self.sigma)
         }
         self.info.add(
             transaction_fees=self.transaction_fees,

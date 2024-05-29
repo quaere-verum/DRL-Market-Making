@@ -14,11 +14,11 @@ activation_fns = {
 class PreprocessNet(nn.Module):
     def __init__(self,
                  state_shape,
-                 linear_dims: Tuple[int],
+                 linear_dims: Tuple[int, ...],
                  device: str,
                  activation_fn: str | None = 'relu',
                  norm_layer: bool = True,
-                 residual_dims: Optional[Tuple[int]] | None = None):
+                 residual_dims: Optional[Tuple[int, ...]] | None = None):
         super().__init__()
         self.output_dim = linear_dims[-1] if residual_dims is None else residual_dims[-1]
         self.device = device
@@ -58,13 +58,13 @@ class PreprocessNet(nn.Module):
 
 class QNet(nn.Module):
     def __init__(self,
-                 state_shape: Tuple[int],
-                 action_shape: Tuple[int],
-                 linear_dims: Tuple[int],
+                 state_shape: Tuple[int, ...],
+                 action_shape: Tuple[int, ...] | int,
+                 linear_dims: Tuple[int, ...],
                  device: str,
                  activation_fn: str | nn.Module | None = 'relu',
                  norm_layer: bool = True,
-                 residual_dims: Optional[Tuple[int]] = None):
+                 residual_dims: Optional[Tuple[int, ...]] = None):
         super().__init__()
         self.device = device
         self.model = PreprocessNet(state_shape=state_shape,

@@ -6,15 +6,15 @@ from option_hedging.gym_envs import OptionHedgingEnv, make_env
 def black_scholes_benchmark(env: OptionHedgingEnv, n_trials: int) -> Tuple[float, float]:
     rewards = np.zeros(n_trials)
     for trial in range(n_trials):
-        _, _ = env.reset()
+        obs, info = env.reset()
         total_reward = 0
         done, truncated = False, False
         while not done and not truncated:
             hedge = env.portfolio.black_scholes_hedge(env.sigma)
             if env.action_bins > 0:
-                hedge = int((1+env.epsilon)*env.action_bins*hedge)
+                hedge = np.round(hedge/(1+env.epsilon)*env.action_bins)
             action = np.array([hedge])
-            _, reward, done, truncated, info = env.step(action)
+            obs, reward, done, truncated, info = env.step(action)
             total_reward += reward
         rewards[trial] = total_reward
     return np.mean(rewards), np.std(rewards)
@@ -43,5 +43,5 @@ if __name__ == '__main__':
                    rebalance_frequency=24,
                    seed=123,
                    transaction_fees=0.001)()
-    print(black_scholes_benchmark(env, 100))
-    print(random_agent_benchmark(env, 100))
+    print(black_scholes_benchmark(env, 1000))
+    print(random_agent_benchmark(env, 1000))
