@@ -71,7 +71,7 @@ def a2c_trial(trainer_kwargs: Dict[str, int],
         critic=critic,
         optim=optim,
         action_space=env.action_space,
-        action_scaling=False,
+        action_scaling=False if env_kwargs['action_bins'] > 0 else True,
         dist_fn=dist_fn,
         **policy_kwargs
     )

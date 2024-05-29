@@ -23,7 +23,7 @@ lr_scheduler_kwargs = {
 }
 
 env_kwargs = {
-        'epsilon': 0.,
+        'epsilon': 0.1,
         'sigma': 0.1,
         'rho': 0.01,
         'action_bins': 30,

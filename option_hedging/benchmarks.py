@@ -35,7 +35,7 @@ def random_agent_benchmark(env: OptionHedgingEnv, n_trials: int) -> Tuple[float,
 
 
 if __name__ == '__main__':
-    env = make_env(epsilon=0.01,
+    env = make_env(epsilon=0.05,
                    sigma=0.15,
                    rho=0.02,
                    action_bins=20,

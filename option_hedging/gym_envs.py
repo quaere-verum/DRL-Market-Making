@@ -53,9 +53,9 @@ class OptionHedgingEnv(gym.Env):
         self.epsilon = epsilon
 
         if action_bins == 0:
-            self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
+            self.action_space = gym.spaces.Box(low=-epsilon, high=epsilon)
         else:
-            self.action_space = gym.spaces.Discrete(action_bins)
+            self.action_space = gym.spaces.Discrete(2*action_bins+1)
         # stock price, remaining time, stock held, strike price, option_valuation, black_scholes_hedge
         self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
                                                 high=np.array([1e3, T+1,
@@ -77,9 +77,9 @@ class OptionHedgingEnv(gym.Env):
 
     def _process_action(self, action: Union[np.ndarray, np.int32]) -> np.float32:
         if not isinstance(action, (np.ndarray, list, tuple)) and self.action_bins > 0:
-            return np.float32(action/self.action_bins*(1+self.epsilon))
+            return np.float32((action - self.action_bins) / self.action_bins * self.epsilon)
         elif self.action_bins > 0:
-            return np.float32(action[0] / self.action_bins * (1 + self.epsilon))
+            return np.float32((action[0] - self.action_bins) / self.action_bins * self.epsilon)
         elif isinstance(action, (np.ndarray, list, tuple)):
             return np.float32(action[0])
         else:
@@ -111,8 +111,7 @@ class OptionHedgingEnv(gym.Env):
             stock_held=self.portfolio.stock_held,
             stock_price=self.portfolio.stock_price,
             capital=self.portfolio.capital,
-            option_value=state['option_value'],
-            action=None
+            option_value=state['option_value']
         )
         return np.array(list(state.values()), dtype=np.float32), self.info[-1]
 
@@ -121,7 +120,8 @@ class OptionHedgingEnv(gym.Env):
         done, truncated = False, False
         price_change = np.exp(self.rng.normal(0, self.sigma*np.sqrt(self.dt)))
         new_price = self.portfolio.stock_price * price_change
-        self.portfolio.update_position(new_price, action)
+        black_scholes_hedge = self.portfolio.black_scholes_hedge(self.sigma)
+        self.portfolio.update_position(new_price, black_scholes_hedge + action)
 
         state = {
             'stock_price': self.portfolio.stock_price,
@@ -129,7 +129,7 @@ class OptionHedgingEnv(gym.Env):
             'stock_held': self.portfolio.stock_held,
             'strike_price': self.portfolio.strike_price,
             'option_value': self.portfolio.option_valuation(self.sigma),
-            'black_scholes_hedge': self.portfolio.black_scholes_hedge(self.sigma)
+            'black_scholes_hedge': black_scholes_hedge
         }
         self.info.add(
             transaction_fees=self.transaction_fees,
@@ -140,7 +140,6 @@ class OptionHedgingEnv(gym.Env):
             stock_price=self.portfolio.stock_price,
             capital=self.portfolio.capital,
             option_value=state['option_value'],
-            action=action
         )
         reward = self.reward_function(self.info)
         if np.isclose(self.portfolio.remaining_time, self.dt):

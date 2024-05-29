@@ -74,7 +74,7 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
         optim=optim,
         dist_fn=dist_fn,
         action_space=env.action_space,
-        action_scaling=False,
+        action_scaling=False if env_kwargs['action_bins'] > 0 else True,
         **policy_kwargs
     )
 

@@ -68,7 +68,7 @@ def ddpg_trial(trainer_kwargs: Dict[str, int],
         actor_optim=actor_optim,
         critic_optim=critic_optim,
         action_space=env.action_space,
-        action_scaling=False,
+        action_scaling=True,
         **policy_kwargs
     )
 
