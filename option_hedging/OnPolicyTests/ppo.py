@@ -38,6 +38,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 def ppo_trial(trainer_kwargs: Dict[str, int],
               env_kwargs: Dict[str, Any],
               policy_kwargs: Dict[str, Any],
+              lr_scheduler_kwargs: Dict[str, Any] | None,
               net_kwargs: Dict[str, Tuple[int]],
               buffer_size: int,
               lr: float,
@@ -67,12 +68,19 @@ def ppo_trial(trainer_kwargs: Dict[str, int],
     critic = Critic(preprocess_net=net, device=device).to(device)
     actor_critic = ActorCritic(actor, critic)
     optim = torch.optim.Adam(actor_critic.parameters(), lr=lr)
+    if lr_scheduler_kwargs is not None:
+        lr_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer=optim,
+                                                         start_factor=1,
+                                                         **lr_scheduler_kwargs)
+    else:
+        lr_scheduler = None
 
     policy = PPOPolicy(
         actor=actor,
         critic=critic,
         optim=optim,
         dist_fn=dist_fn,
+        lr_scheduler=lr_scheduler,
         action_space=env.action_space,
         action_scaling=False if env_kwargs['action_bins'] > 0 else True,
         **policy_kwargs

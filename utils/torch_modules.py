@@ -73,13 +73,15 @@ class QNet(nn.Module):
                                    activation_fn=activation_fn,
                                    norm_layer=norm_layer,
                                    residual_dims=residual_dims).to(device)
+        self.action_shape = (action_shape,) if isinstance(action_shape, (int, np.int32, np.int64)) \
+            else tuple(action_shape)
         self.output_layer = nn.Linear(linear_dims[-1] if residual_dims is None else residual_dims[-1],
                                       np.prod(action_shape)).to(device)
 
     def forward(self, obs: np.ndarray | torch.Tensor, state: Any = None, **kwargs) -> Tuple[torch.Tensor, Any]:
         obs = torch.as_tensor(obs, device=self.device)
         logits, _ = self.model(obs)
-        return self.output_layer(logits), state
+        return self.output_layer(logits).view((-1,)+self.action_shape), state
 
 
 class ResidualBlock(nn.Module):
