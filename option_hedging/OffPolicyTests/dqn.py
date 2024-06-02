@@ -88,7 +88,6 @@ def dqn_trial(trainer_kwargs: Dict[str, int],
     train_fn = epsilon_greedy_scheduler(epsilon_greedy=epsilon_greedy,
                                         policy=policy)
     train_collector = Collector(policy, train_envs, VectorReplayBuffer(buffer_size, len(train_envs)))
-    train_collector.collect(buffer_size, random=True)
     test_collector = Collector(policy, test_envs)
     return OffpolicyTrainer(
                 policy=policy,

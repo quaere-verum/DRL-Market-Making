@@ -5,45 +5,47 @@ from option_hedging.OffPolicyTests.ddpg import ddpg_trial
 from option_hedging.OffPolicyTests.sac import sac_trial
 from option_hedging.OffPolicyTests.td3 import td3_trial
 
-trainer_kwargs = {
-        'max_epoch': 15,
-        'batch_size': 32,
-        'step_per_epoch': 20_000,
-        'episode_per_test': 1_000,
-        'update_per_step': 3,  # Off-policy
-        'repeat_per_collect': 3,  # On-policy
-        'step_per_collect': 5_000,
-        'verbose': True,
-        'show_progress': True
+training_kwargs = {
+        'trainer_kwargs': {
+                'max_epoch': 50,
+                'batch_size': 32,  # Small batch size (8-64) has been shown to improve DRL training performance
+                'step_per_epoch': 20_000,
+                'episode_per_test': 1_000,
+                'update_per_step': 1.,  # Off-policy
+                'repeat_per_collect': 3,  # On-policy
+                'step_per_collect': 10_000,
+                'verbose': True,
+                'show_progress': True
+        },
+        'buffer_size': 500_000,
+        'subproc': True
 }
 
-lr_scheduler_kwargs = {
-        'end_factor': 0.005,
-        'total_iters': 10
+lr_kwargs = {
+        'lr_scheduler_kwargs': {
+                'end_factor': 0.1,
+                'total_iters': 10
+        },
+        'lr': 0.0025
 }
 
 env_kwargs = {
-        'epsilon': 0.1,
+        'epsilon': 0.01,
         'sigma': 0.15,
-        'rho': 0.05,
-        'action_bins': 10,
+        'rho': 0.02,
+        'action_bins': 20,
         'T': 1,
         'rebalance_frequency': 12
 }
 
 net_kwargs = {
-        'linear_dims': tuple(256 for _ in range(3)),
+        'linear_dims': tuple([256, 128, 64]),
         'residual_dims': None,
         'activation_fn': 'relu',
         'norm_layer': True
 }
 
 ppo_kwargs = {
-        'trainer_kwargs': trainer_kwargs,
-        'buffer_size': 2000,
-        'lr': 0.01,
-        'lr_scheduler_kwargs': lr_scheduler_kwargs,
-        'subproc': False,
         'net_kwargs': net_kwargs,
         'policy_kwargs': {
                 'eps_clip': 0.2,
@@ -55,38 +57,35 @@ ppo_kwargs = {
                 'gae_lambda': 0.999,
                 'discount_factor': 0.99
         },
-        'env_kwargs': env_kwargs
+        'env_kwargs': env_kwargs,
+        **training_kwargs,
+        **lr_kwargs
 }
 
 sac_kwargs = {
-        'trainer_kwargs': trainer_kwargs,
         'policy_kwargs': {
-                'tau': 0.01
+                'tau': 0.02
         },
-        'buffer_size': 2000,
-        'lr': 0.00025,
-        'subproc': False,
         'net_kwargs': net_kwargs,
-        'env_kwargs': env_kwargs
+        'env_kwargs': env_kwargs,
+        **training_kwargs,
+        **lr_kwargs
 }
 
 ddpg_kwargs = {
-        'trainer_kwargs': trainer_kwargs,
         'policy_kwargs': {
                 'exploration_noise': 'default',
                 'tau': 0.01
         },
-        'buffer_size': 5000,
-        'lr': 0.00025,
-        'subproc': False,
         'net_kwargs': net_kwargs,
-        'env_kwargs': env_kwargs
+        'env_kwargs': env_kwargs,
+        **training_kwargs,
+        **lr_kwargs
 }
 
 td3_kwargs = ddpg_kwargs.copy()
 
 a2c_kwargs = {
-        'trainer_kwargs': trainer_kwargs,
         'policy_kwargs':{
                 'vf_coef': 0.5,
                 'ent_coef': 0.005,
@@ -94,31 +93,27 @@ a2c_kwargs = {
                 'gae_lambda': 0.999,
                 'discount_factor': 0.99
         },
-        'buffer_size': 10000,
-        'lr': 0.001,
-        'subproc': False,
         'net_kwargs': net_kwargs,
-        'env_kwargs': env_kwargs
+        'env_kwargs': env_kwargs,
+        **training_kwargs,
+        **lr_kwargs
 }
 
 dqn_kwargs = {
-        'trainer_kwargs': trainer_kwargs,
         'policy_kwargs': {
-                'discount_factor': 0.99,
-                'estimation_step': 2,
-                'target_update_freq': 20_000,
+                'discount_factor': 0.999,
+                'estimation_step': 1,
+                'target_update_freq': 5_000,
                 'is_double': True,
                 'clip_loss_grad': True
         },
-        'lr_scheduler_kwargs': lr_scheduler_kwargs,
-        'lr': 0.01,
-        'buffer_size': 100_000,
         'epsilon_greedy': {'start': 1.,
                            'end': 0.1,
-                           'max_steps': 150_000},
-        'subproc': True,
+                           'max_steps': 500_000},
         'net_kwargs': net_kwargs,
-        'env_kwargs': env_kwargs
+        'env_kwargs': env_kwargs,
+        **training_kwargs,
+        **lr_kwargs
 }
 
 

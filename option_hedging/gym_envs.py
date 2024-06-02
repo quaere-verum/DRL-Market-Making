@@ -53,9 +53,9 @@ class OptionHedgingEnv(gym.Env):
         self.epsilon = epsilon
 
         if action_bins == 0:
-            self.action_space = gym.spaces.Box(low=-epsilon, high=epsilon)
+            self.action_space = gym.spaces.Box(low=0, high=1 + epsilon)
         else:
-            self.action_space = gym.spaces.Discrete(2*action_bins+1)
+            self.action_space = gym.spaces.Discrete(action_bins)
         # stock price, remaining time, stock held, strike price, option_valuation, black_scholes_hedge
         self.observation_space = gym.spaces.Box(low=np.array([0, 0, 0, 0, 0, 0]).astype(np.float32),
                                                 high=np.array([1e3, T+1,
@@ -77,9 +77,9 @@ class OptionHedgingEnv(gym.Env):
 
     def _process_action(self, action: Union[np.ndarray, np.int32]) -> np.float32:
         if not isinstance(action, (np.ndarray, list, tuple)) and self.action_bins > 0:
-            return np.float32((action - self.action_bins) / self.action_bins * self.epsilon)
+            return np.float32(action / (self.action_bins - 1) * (1 + self.epsilon))
         elif self.action_bins > 0:
-            return np.float32((action[0] - self.action_bins) / self.action_bins * self.epsilon)
+            return np.float32(action[0] / (self.action_bins - 1) * (1 + self.epsilon))
         elif isinstance(action, (np.ndarray, list, tuple)):
             return np.float32(action[0])
         else:
@@ -121,7 +121,7 @@ class OptionHedgingEnv(gym.Env):
         price_change = np.exp(self.rng.normal(0, self.sigma*np.sqrt(self.dt)))
         new_price = self.portfolio.stock_price * price_change
         black_scholes_hedge = self.portfolio.black_scholes_hedge(self.sigma)
-        self.portfolio.update_position(new_price, black_scholes_hedge + action)
+        self.portfolio.update_position(new_price, action)
 
         state = {
             'stock_price': self.portfolio.stock_price,
