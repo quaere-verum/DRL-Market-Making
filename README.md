@@ -76,8 +76,8 @@ ppo_kwargs = {
 After experimenting with the DQN parameters, found a combination that seemingly results in a stable learning process. (Note: also changed the reward function so the actual numbers cannot be compared to the ones above).
 
 
-![Mean Reward](./Figures/mean_reward.png)
+![Mean Reward](./option_hedging/Figures/mean_reward.png)
 
-![Std Reward](./Figures/std_reward.png)
+![Std Reward](./option_hedging/Figures/std_reward.png)
 
 
