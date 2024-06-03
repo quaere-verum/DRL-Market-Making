@@ -80,4 +80,70 @@ After experimenting with the DQN parameters, found a combination that seemingly 
 
 ![Std Reward](./option_hedging/Figures/std_reward.png)
 
+### 03/06/2024
+Let DDQN train for a million environment steps with a stable learning trajectory. 
+
+
+![Mean Reward](./option_hedging/Figures/ddqn_03062024_mean.png)
+
+![Std Reward](./option_hedging/Figures/ddqn_03062024_std.png)
+
+Parameters:
+```python
+training_kwargs = {
+        'trainer_kwargs': {
+                'max_epoch': 50,
+                'batch_size': 32,  # Small batch size (8-64) has been shown to improve DRL training performance
+                'step_per_epoch': 20_000,
+                'episode_per_test': 1_000,
+                'update_per_step': 1.,  # Off-policy
+                'repeat_per_collect': 3,  # On-policy
+                'step_per_collect': 10_000,
+                'verbose': True,
+                'show_progress': True
+        },
+        'buffer_size': 500_000,
+        'subproc': True
+}
+
+lr_kwargs = {
+        'lr_scheduler_kwargs': {
+                'end_factor': 0.1,
+                'total_iters': 10
+        },
+        'lr': 0.0025
+}
+
+env_kwargs = {
+        'epsilon': 0.01,
+        'sigma': 0.15,
+        'rho': 0.02,
+        'action_bins': 20,
+        'T': 1,
+        'rebalance_frequency': 12
+}
+
+net_kwargs = {
+        'linear_dims': tuple([256, 128, 64]),
+        'residual_dims': None,
+        'activation_fn': 'relu',
+        'norm_layer': True
+}
+dqn_kwargs = {
+        'policy_kwargs': {
+                'discount_factor': 0.999,
+                'estimation_step': 1,
+                'target_update_freq': 5_000,
+                'is_double': True,
+                'clip_loss_grad': True
+        },
+        'epsilon_greedy': {'start': 1.,
+                           'end': 0.1,
+                           'max_steps': 500_000},
+        'net_kwargs': net_kwargs,
+        'env_kwargs': env_kwargs,
+        **training_kwargs,
+        **lr_kwargs
+}
+```
 
