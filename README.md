@@ -81,7 +81,7 @@ After experimenting with the DQN parameters, found a combination that seemingly 
 ![Std Reward](./option_hedging/Figures/std_reward.png)
 
 ### 03/06/2024
-Let DDQN train for a million environment steps with a stable learning trajectory. 
+Let DDQN train for a million environment steps with a stable learning trajectory. The resulting policy beats the mean reward of the Black-Scholes policy, but it's standard deviation is also greater. Nevertheless, the algorithm achieved what it was meant to so we consider the project to be a success.
 
 
 ![Mean Reward](./option_hedging/Figures/ddqn_03062024_mean.png)
